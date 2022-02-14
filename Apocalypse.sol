@@ -1,7 +1,20 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Apocalypse Token
+ * Revoluzion Token
+ * Future ecosystem development would include swap/dex system with chart integration,
+ * Portfolio viewer, dex buy/sell order and web base Play to Earn NFT game Apocalypse.
+ *
+ * Website : revoluzion.io
+ * Apoc Website : apocgame.io
+ * Apoc Game dApp : app.apocgame.io
+ * Discord : https://discord.gg/TvAXzYq5ht
+ * Whitepaper : whitepaper.revoluzion.io
+ * Facebook :facebook.com/revoluziontoken/
+ * Twitter : twitter.com/RevoluzionToken
+ * Linkedin : linkedin.com/company/revoluzion-token/
+ * GitHub : github.com/RevoluzionToken
+ * Telegram : t.me/revoluziontoken
  */
 
 
