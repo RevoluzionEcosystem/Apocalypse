@@ -1597,27 +1597,26 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         _initializeChar(_charStatus, _charType, _charSkill);
 
         addSpecificMaxCharSupply(0, 1, 1, 2); // 2 dark knight fencing
-        //addSpecificMaxCharSupply(0, 1, 2, 2); // 2 dark knight axe
-        //addSpecificMaxCharSupply(0, 1, 3, 2); // 2 dark knight bow
-        //addSpecificMaxCharSupply(0, 1, 4, 2); // 2 dark knight sword
-        //addSpecificMaxCharSupply(0, 1, 5, 2); // 2 dark knight hammer
-        //addSpecificMaxCharSupply(0, 2, 1, 2); // 2 dark wizard energy
-        //addSpecificMaxCharSupply(0, 2, 2, 2); // 2 dark wizard lightning
-        //addSpecificMaxCharSupply(0, 2, 3, 2); // 2 dark wizard earth
-        //addSpecificMaxCharSupply(0, 2, 4, 2); // 2 dark wizard ice
-        //addSpecificMaxCharSupply(0, 2, 5, 2); // 2 dark wizard fire
+        addSpecificMaxCharSupply(0, 1, 2, 2); // 2 dark knight axe
+        addSpecificMaxCharSupply(0, 1, 3, 2); // 2 dark knight bow
+        addSpecificMaxCharSupply(0, 1, 4, 2); // 2 dark knight sword
+        addSpecificMaxCharSupply(0, 1, 5, 2); // 2 dark knight hammer
+        addSpecificMaxCharSupply(0, 2, 1, 2); // 2 dark wizard energy
+        addSpecificMaxCharSupply(0, 2, 2, 2); // 2 dark wizard lightning
+        addSpecificMaxCharSupply(0, 2, 3, 2); // 2 dark wizard earth
+        addSpecificMaxCharSupply(0, 2, 4, 2); // 2 dark wizard ice
+        addSpecificMaxCharSupply(0, 2, 5, 2); // 2 dark wizard fire
 
-        addSpecificMaxCharSupply(1, 1, 1, 2);
-        //addSpecificMaxCharSupply(1, 1, 1, 1000); // 1000 fencing warriors
-        //addSpecificMaxCharSupply(1, 1, 2, 1000); // 1000 axe warriors
-        //addSpecificMaxCharSupply(1, 1, 3, 1000); // 1000 bow warriors
-        //addSpecificMaxCharSupply(1, 1, 4, 1000); // 1000 sword warriors
-        //addSpecificMaxCharSupply(1, 1, 5, 1000); // 1000 hammer warriors                        
-        //addSpecificMaxCharSupply(1, 2, 1, 1000); // 1000 energy mages
-        //addSpecificMaxCharSupply(1, 2, 2, 1000); // 1000 lightning mages
-        //addSpecificMaxCharSupply(1, 2, 3, 1000); // 1000 earth mages
-        //addSpecificMaxCharSupply(1, 2, 4, 1000); // 1000 ice mages
-        //addSpecificMaxCharSupply(1, 2, 5, 1000); // 1000 fire mages
+        addSpecificMaxCharSupply(1, 1, 1, 1000); // 1000 fencing warriors
+        addSpecificMaxCharSupply(1, 1, 2, 1000); // 1000 axe warriors
+        addSpecificMaxCharSupply(1, 1, 3, 1000); // 1000 bow warriors
+        addSpecificMaxCharSupply(1, 1, 4, 1000); // 1000 sword warriors
+        addSpecificMaxCharSupply(1, 1, 5, 1000); // 1000 hammer warriors                        
+        addSpecificMaxCharSupply(1, 2, 1, 1000); // 1000 energy mages
+        addSpecificMaxCharSupply(1, 2, 2, 1000); // 1000 lightning mages
+        addSpecificMaxCharSupply(1, 2, 3, 1000); // 1000 earth mages
+        addSpecificMaxCharSupply(1, 2, 4, 1000); // 1000 ice mages
+        addSpecificMaxCharSupply(1, 2, 5, 1000); // 1000 fire mages
 
     }
 
