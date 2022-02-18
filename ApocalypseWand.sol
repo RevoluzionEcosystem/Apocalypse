@@ -1438,60 +1438,7 @@ abstract contract ERC721Burnable is Context, ERC721 {
 }
 
 
-/** APOCALYPSE **/
-
-contract ApocalypseRandomizer {
-
-
-    /** DATA **/
-    uint256 internal constant maskLast8Bits = uint256(0xff);
-    uint256 internal constant maskFirst248Bits = type(uint256).max;
-
-    /** FUNCTION **/
-       
-    function sliceNumber(uint256 _n, uint256 _base, uint256 _index, uint256 _offset) public pure returns (uint256) {
-        return _sliceNumber(_n, _base, _index, _offset);
-    }
-
-    /**
-     * @dev Given a number get a slice of any bits, at certain offset.
-     * 
-     * @param _n a number to be sliced
-     * @param _base base number
-     * @param _index how many bits long is the new number
-     * @param _offset how many bits to skip
-     */
-    function _sliceNumber(uint256 _n, uint256 _base, uint256 _index, uint256 _offset) internal pure returns (uint256) {
-        uint256 mask = uint256((_base**_index) - 1) << _offset;
-        return uint256((_n & mask) >> _offset);
-    }
-
-    function randomNGenerator(uint256 _param1, uint256 _param2, uint256 _targetBlock) public view returns (uint256) {
-        return _randomNGenerator(_param1, _param2, _targetBlock);
-    }
-
-    /**
-     * @dev Generate random number from the hash of the "target block".
-     */
-    function _randomNGenerator(uint256 _param1, uint256 _param2, uint256 _targetBlock) internal view returns (uint256) {
-        uint256 randomN = uint256(blockhash(_targetBlock));
-        
-        if (randomN == 0) {
-            _targetBlock = (block.number & maskFirst248Bits) + (_targetBlock & maskLast8Bits);
-        
-            if (_targetBlock >= block.number) {
-                _targetBlock -= 256;
-            }
-            
-            randomN = uint256(blockhash(_targetBlock));
-        }
-
-        randomN = uint256(keccak256(abi.encodePacked(randomN, _param1, _param2, _targetBlock)));
-
-        return randomN;
-    }
-
-}
+/** APOCALYPSE WAND **/
 
 contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Auth, ERC721Burnable {
     
@@ -1581,17 +1528,17 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
         
         rarePercentage = [5, 4];
 
-        addSpecificMaxWandSupply(0, 1, 2); // 2 rare fencing
-        addSpecificMaxWandSupply(0, 2, 2); // 2 rare axe
-        addSpecificMaxWandSupply(0, 3, 2); // 2 rare bow
-        addSpecificMaxWandSupply(0, 4, 2); // 2 rare sword
-        addSpecificMaxWandSupply(0, 5, 2); // 2 rare hammer
+        addSpecificMaxWandSupply(0, 1, 2); // 2 rare energy
+        addSpecificMaxWandSupply(0, 2, 2); // 2 rare lightning
+        addSpecificMaxWandSupply(0, 3, 2); // 2 rare earth
+        addSpecificMaxWandSupply(0, 4, 2); // 2 rare ice
+        addSpecificMaxWandSupply(0, 5, 2); // 2 rare fire
 
-        addSpecificMaxWandSupply(1, 1, 100000); // 100,000 fencing
-        addSpecificMaxWandSupply(1, 2, 100000); // 100,000 axe
-        addSpecificMaxWandSupply(1, 3, 100000); // 100,000 bow
-        addSpecificMaxWandSupply(1, 4, 100000); // 100,000 sword
-        addSpecificMaxWandSupply(1, 5, 100000); // 100,000 hammer
+        addSpecificMaxWandSupply(1, 1, 100000); // 100,000 energy
+        addSpecificMaxWandSupply(1, 2, 100000); // 100,000 lightning
+        addSpecificMaxWandSupply(1, 3, 100000); // 100,000 earth
+        addSpecificMaxWandSupply(1, 4, 100000); // 100,000 ice
+        addSpecificMaxWandSupply(1, 5, 100000); // 100,000 fire
 
         _createWand(
             [uint256(0),uint256(0)],
