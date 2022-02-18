@@ -1859,18 +1859,15 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
 
     }
 
-    function upgradeCharacter(address _owner, uint256 _tokenID1, uint256 _tokenID2) external whenNotPaused authorized returns (bool, uint256) {
+    function upgradeCharacter(address _owner, uint256 _tokenID1, uint256 _tokenID2, uint256 _nextStatus) external whenNotPaused authorized returns (bool, uint256) {
         require(
-            apocChar[_tokenID1].charStatus != 0 &&
-            apocChar[_tokenID2].charStatus != 0 &&
             apocChar[_tokenID1].charStatus <= maxUpgradeStatus &&
             apocChar[_tokenID2].charStatus <= maxUpgradeStatus &&
             apocChar[_tokenID1].charType == apocChar[_tokenID2].charType &&
             apocChar[_tokenID1].charSkill == apocChar[_tokenID2].charSkill
         );
 
-        uint256 _charStatus = apocChar[_tokenID2].charStatus;
-        uint256 _charType = apocChar[_tokenID2].charType;
+        uint256 _charType = apocChar[_tokenID1].charType;
         uint256 _charSkill = apocChar[_tokenID2].charSkill;
 
         uint256 userAddress = uint256(uint160(_msgSender()));
@@ -1880,11 +1877,11 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
 
         if (upgradeCheck <= upgradePercentage[0]) {
 
-            uint256[3] memory _currentSupplyInfo = [upgradeCurrentSupply + 1, currentUpgradeCharSupply[_charType] + 1, currentSpecificUpgradeCharSupply[_charStatus + 1][_charType][_charSkill] + 1];
+            uint256[3] memory _currentSupplyInfo = [upgradeCurrentSupply + 1, currentUpgradeCharSupply[_charType] + 1, currentSpecificUpgradeCharSupply[_nextStatus][_charType][_charSkill] + 1];
 
             _createCharacter(
                 _currentSupplyInfo,
-                _charStatus + 1,
+                _nextStatus,
                 _charType,
                 _charSkill,
                 1,
@@ -1896,7 +1893,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
 
             upgradeCurrentSupply += 1;
             currentUpgradeCharSupply[_charType] += 1;
-            currentSpecificUpgradeCharSupply[_charStatus + 1][_charType][_charSkill] += 1;
+            currentSpecificUpgradeCharSupply[_nextStatus][_charType][_charSkill] += 1;
 
             uint256 tokenID = _tokenIdCounter.current();
             string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
