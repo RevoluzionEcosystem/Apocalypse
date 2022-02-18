@@ -1625,6 +1625,8 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
 
     event MintNewCharacter(address _tokenOwner, uint256 _tokenID);
     event AddCharacterSupply(uint256 _maxCharSupply);
+    event SuccessfulCharacterUpgrade(address _owner, uint256 _tokenID1, uint256 _tokenID2, uint256 tokenID);
+    event FailedCharacterUpgrade(address _owner, uint256 _tokenID1, uint256 _tokenID2);
 
 
     /** FUNCTION **/
@@ -1902,11 +1904,15 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
             _burnUpgrade(_tokenID1);
             _burnUpgrade(_tokenID2);
 
+            emit SuccessfulCharacterUpgrade(_owner, _tokenID1, _tokenID2, tokenID);
+
             return (true, tokenID);
         }
 
         _burnUpgrade(_tokenID1);
         _burnUpgrade(_tokenID2);
+
+        emit FailedCharacterUpgrade(_owner, _tokenID1, _tokenID2);
 
         return (false, 0);
 
