@@ -1568,7 +1568,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         cid = _cid;
 
         shieldStatus = [0,1];
-        shieldType = [1,2,3,4,5];
+        shieldType = [1,2];
         shieldAttack = [3,6,10,15,20,30,50,70,100,120];
         shieldUpChance = [40,38,35,32,28,23,20,15,10,5];
         shieldDepletion = [0,0,0,0,20,30,40,60,100,100];
@@ -1581,17 +1581,10 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         
         rarePercentage = [5, 4];
 
-        addSpecificMaxShieldSupply(0, 1, 2); // 2 rare fencing
-        addSpecificMaxShieldSupply(0, 2, 2); // 2 rare axe
-        addSpecificMaxShieldSupply(0, 3, 2); // 2 rare bow
-        addSpecificMaxShieldSupply(0, 4, 2); // 2 rare sword
-        addSpecificMaxShieldSupply(0, 5, 2); // 2 rare hammer
+        addSpecificMaxShieldSupply(0, 1, 5); // 5 medusa shield
+        addSpecificMaxShieldSupply(0, 2, 5); // 5 devlin shield
 
-        addSpecificMaxShieldSupply(1, 1, 100000); // 100,000 fencing
-        addSpecificMaxShieldSupply(1, 2, 100000); // 100,000 axe
-        addSpecificMaxShieldSupply(1, 3, 100000); // 100,000 bow
-        addSpecificMaxShieldSupply(1, 4, 100000); // 100,000 sword
-        addSpecificMaxShieldSupply(1, 5, 100000); // 100,000 hammer
+        addSpecificMaxShieldSupply(1, 1, 100000); // 100,000 tower shield
 
         _createShield(
             [uint256(0),uint256(0)],
