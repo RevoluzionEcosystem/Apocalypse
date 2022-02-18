@@ -1624,6 +1624,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
     /** EVENT **/
 
     event MintNewCharacter(address _tokenOwner, uint256 _tokenID);
+    event AirdropCharacter(address _tokenOwner, uint256 _tokenID);
     event AddCharacterSupply(uint256 _maxCharSupply);
     event SuccessfulCharacterUpgrade(address _owner, uint256 _tokenID1, uint256 _tokenID2, uint256 tokenID);
     event FailedCharacterUpgrade(address _owner, uint256 _tokenID1, uint256 _tokenID2);
@@ -2108,8 +2109,12 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         currentRareCharSupply[mixer[0]] += 1;
         currentSpecificRareCharSupply[mixer[0]][mixer[1]] += 1;
 
+        uint256 tokenID = _tokenIdCounter.current();
         string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
         _safeMint(_owner, _tokenURI);
+
+        emit AirdropCharacter(_owner, tokenID);
+
     }
 
     function _mintCommon(address _owner) internal returns (uint256) {
@@ -2199,8 +2204,12 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         currentCommonCharSupply[mixer[0]] += 1;
         currentSpecificCommonCharSupply[mixer[0]][mixer[1]] += 1;
 
+        uint256 tokenID = _tokenIdCounter.current();
         string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
         _safeMint(_owner, _tokenURI);
+        
+        emit AirdropCharacter(_owner, tokenID);
+
     }
 
     function _mixer(address _owner, uint256 _offset) internal view returns (uint256[3] memory){
