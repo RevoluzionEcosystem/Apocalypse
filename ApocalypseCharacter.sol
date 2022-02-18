@@ -371,6 +371,7 @@ abstract contract Auth is Context {
      * @dev Initializes the contract setting the deployer as the initial owner.
      */
     constructor() {
+        _owner = _msgSender();
         authorizations[_msgSender()] = true;
     }
 
@@ -1569,9 +1570,6 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         string memory _URI,
         string memory _IPFS,
         string memory _cid,
-        uint256[] memory _charStatus,
-        uint256[] memory _charType,
-        uint256[] memory _charSkill,
         ApocalypseRandomizer _randomizer
     ) ERC721(_name, _symbol) {
         randomizer = _randomizer;
@@ -1594,7 +1592,9 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         baseNextXP = 1000;
         maxUpgradeStatus = 2;
 
-        _initializeChar(_charStatus, _charType, _charSkill);
+        charStatus = [0,1,2];
+        charType = [1,2];
+        charSkill = [1,2,3,4,5];
 
         addSpecificMaxCharSupply(0, 1, 1, 2); // 2 dark knight fencing
         addSpecificMaxCharSupply(0, 1, 2, 2); // 2 dark knight axe
@@ -1618,6 +1618,21 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         addSpecificMaxCharSupply(1, 2, 4, 1000); // 1000 ice mages
         addSpecificMaxCharSupply(1, 2, 5, 1000); // 1000 fire mages
 
+        _createCharacter(
+            [uint256(0),uint256(0),uint256(0)],
+            0,
+            0,
+            0,
+            1,
+            baseHP,
+            0,
+            commonBaseStat[0],
+            commonBaseStat[1]        
+        );
+
+        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
+        _safeMint(_msgSender(), _tokenURI);
+
     }
 
     
@@ -1631,12 +1646,6 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
 
 
     /** FUNCTION **/
-
-    function _initializeChar(uint256[] memory _charStatus, uint256[] memory _charType, uint256[] memory _charSkill) internal {
-        addCharStatus(_charStatus);
-        addCharType(_charType);
-        addCharSkill(_charSkill);
-    }
 
     function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
         randomizer = _randomizer;
@@ -1676,6 +1685,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         uint256 _charSkill,
         uint256 _maxCharSupply
     ) public authorized {
+        require(_charStatus < 2);
         if (_charStatus == 0) {
             maxRareCharSupply[_charType] += _maxCharSupply;
             maxSpecificRareCharSupply[_charType][_charSkill] += _maxCharSupply;
@@ -1800,9 +1810,9 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         }
     }
 
-    function updateNextXP(uint256 _tokenID, uint256 _nextXP) external whenNotPaused authorized {
-        require(apocChar[_tokenID].charNextXP >= baseNextXP);
-        apocChar[_tokenID].charNextXP = _nextXP;
+    function updateNextXP(uint256 _tokenID, uint256 _charLevel) external whenNotPaused authorized {
+        require(apocChar[_tokenID].charXP == apocChar[_tokenID].charNextXP);
+        apocChar[_tokenID].charNextXP = baseNextXP * _charLevel;
     }
 
     function increaseAngelModifier(uint256 _tokenID, uint256 _angelModifier) external whenNotPaused authorized {
@@ -1959,20 +1969,30 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         uint256 _baseAttack;
         uint256 _baseDefence;
 
-        addSpecificMaxCharSupply(_charStatus, _charType, _charSkill, 1);
+        if (_charStatus <= 1) {
+            addSpecificMaxCharSupply(_charStatus, _charType, _charSkill, 1);
+        } else {
+            _addTotalMaxCharSupply(_charStatus, 1);
+        }
 
         if (_charStatus == 0) {
-            _charStatusIndex = rareCurrentSupply;
-            _charTypeIndex = currentRareCharSupply[_charType];
-            _charSkillIndex = currentSpecificRareCharSupply[_charType][_charSkill];  
+            _charStatusIndex = rareCurrentSupply + 1;
+            _charTypeIndex = currentRareCharSupply[_charType] + 1;
+            _charSkillIndex = currentSpecificRareCharSupply[_charType][_charSkill] + 1;
             _baseAttack = rareBaseStat[0];
             _baseDefence = rareBaseStat[1];
-        } else {
-            _charStatusIndex = commonCurrentSupply;
-            _charTypeIndex = currentCommonCharSupply[_charType];
-            _charSkillIndex = currentSpecificCommonCharSupply[_charType][_charSkill];
+        } else if (_charStatus == 1) {
+            _charStatusIndex = commonCurrentSupply + 1;
+            _charTypeIndex = currentCommonCharSupply[_charType] + 1;
+            _charSkillIndex = currentSpecificCommonCharSupply[_charType][_charSkill] + 1;
             _baseAttack = commonBaseStat[0];
             _baseDefence = commonBaseStat[1];
+        } else {
+            _charStatusIndex = upgradeCurrentSupply + 1;
+            _charTypeIndex = currentUpgradeCharSupply[_charType] + 1;
+            _charSkillIndex = currentSpecificUpgradeCharSupply[_charStatus][_charType][_charSkill] + 1;
+            _baseAttack = upgradeBaseStat[0];
+            _baseDefence = upgradeBaseStat[1];
         }
 
         uint256[3] memory _currentSupplyInfo = [_charStatusIndex, _charTypeIndex, _charSkillIndex];
@@ -1993,10 +2013,14 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
             rareCurrentSupply += 1;
             currentRareCharSupply[_charType] += 1;
             currentSpecificRareCharSupply[_charType][_charSkill] += 1;
-        } else {
+        } else if (_charStatus == 1) {
             commonCurrentSupply += 1;
             currentCommonCharSupply[_charType] += 1;
             currentSpecificCommonCharSupply[_charType][_charSkill] += 1;
+        } else {
+            upgradeCurrentSupply += 1;
+            currentUpgradeCharSupply[_charType] += 1;
+            currentSpecificUpgradeCharSupply[_charStatus][_charType][_charSkill] += 1;
         }
 
         string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
