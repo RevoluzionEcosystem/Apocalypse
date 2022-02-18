@@ -1514,7 +1514,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         uint256 shieldType;
         uint256 shieldLevel;
         uint256 shieldEndurance;
-        uint256 baseAttack;
+        uint256 baseDefence;
     }
 
     uint256 public maxLevel;
@@ -1756,19 +1756,19 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         shieldDepletion[_shieldLevel] = _shieldDepletion;
     }
 
-    function setCommonBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
-        require(_baseEndurance > 0 && _baseAttack > 0);
-        commonBaseStat = [_baseEndurance, _baseAttack];
+    function setCommonBaseStat(uint256 _baseEndurance, uint256 _baseDefence) public authorized {
+        require(_baseEndurance > 0 && _baseDefence > 0);
+        commonBaseStat = [_baseEndurance, _baseDefence];
     }
 
-    function setUpgradeBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
-        require(_baseEndurance > 0 && _baseAttack > 0);
-        upgradeBaseStat = [_baseEndurance, _baseAttack];
+    function setUpgradeBaseStat(uint256 _baseEndurance, uint256 _baseDefence) public authorized {
+        require(_baseEndurance > 0 && _baseDefence > 0);
+        upgradeBaseStat = [_baseEndurance, _baseDefence];
     }
 
-    function setRareBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
-        require(_baseEndurance > 0 && _baseAttack > 0);
-        rareBaseStat = [_baseEndurance, _baseAttack];
+    function setRareBaseStat(uint256 _baseEndurance, uint256 _baseDefence) public authorized {
+        require(_baseEndurance > 0 && _baseDefence > 0);
+        rareBaseStat = [_baseEndurance, _baseDefence];
     }
 
     function addShieldStatus(uint256[] memory _statusID) public authorized {
@@ -1950,7 +1950,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         uint256 _shieldStatusIndex;
         uint256 _shieldTypeIndex;
         uint256 _baseEndurance;
-        uint256 _baseAttack;
+        uint256 _baseDefence;
 
         addSpecificMaxShieldSupply(_shieldStatus, _shieldType, 1);
 
@@ -1958,17 +1958,17 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
             _shieldStatusIndex = rareCurrentSupply + 1;
             _shieldTypeIndex = currentRareShieldSupply[_shieldType] + 1;
             _baseEndurance = rareBaseStat[0];
-            _baseAttack = rareBaseStat[1];
+            _baseDefence = rareBaseStat[1];
         } else if (_shieldStatus == 1) {
             _shieldStatusIndex = commonCurrentSupply + 1;
             _shieldTypeIndex = currentCommonShieldSupply[_shieldType] + 1;
             _baseEndurance = commonBaseStat[0];
-            _baseAttack = commonBaseStat[1];
+            _baseDefence = commonBaseStat[1];
         } else {
             _shieldStatusIndex = upgradeCurrentSupply + 1;
             _shieldTypeIndex = currentSpecificUpgradeShieldSupply[_shieldStatus][_shieldType] + 1;
             _baseEndurance = upgradeBaseStat[0];
-            _baseAttack = upgradeBaseStat[1];
+            _baseDefence = upgradeBaseStat[1];
         }
 
         uint256[2] memory _currentSupplyInfo = [_shieldStatusIndex, _shieldTypeIndex];
@@ -1979,7 +1979,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
             _shieldType,
             0,
             _baseEndurance,
-            _baseAttack
+            _baseDefence
         );
 
         if (_shieldStatus == 0) {
@@ -2167,7 +2167,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         uint256 _shieldType,
         uint256 _shieldLevel,
         uint256 _shieldEndurance,
-        uint256 _baseAttack
+        uint256 _baseDefence
     ) internal {
         Shield memory _apocShield = Shield({
             tokenID: _tokenIdCounter.current(),
@@ -2177,7 +2177,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
             shieldType: _shieldType,
             shieldLevel: _shieldLevel,
             shieldEndurance: _shieldEndurance,
-            baseAttack: _baseAttack
+            baseDefence: _baseDefence
         });
         
         apocShield.push(_apocShield);
