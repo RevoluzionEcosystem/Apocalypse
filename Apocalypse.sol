@@ -781,7 +781,7 @@ contract RewardPoolDistributor is IRewardPoolDistributor, Context {
 
 /** APOCALYPSE TOKEN **/
 
-contract Apocalypse is IERC20Extended, Auth {
+contract RevoluzionApocalypse is IERC20Extended, Auth {
 
 
     /* LIBRARY*/
