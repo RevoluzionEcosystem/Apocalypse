@@ -861,7 +861,8 @@ contract Apocalypse is IERC20Extended, Auth {
 
 
     /* CONSTRUCTOR */
-    constructor(string memory name_, string memory symbol_, uint8 decimals_, uint256 totalSupply_, RewardPoolDistributor distributor_, address rewardToken_, address router_, uint256[6] memory feeSettings_) payable Auth(_msgSender()) {
+    constructor(string memory name_, string memory symbol_, uint8 decimals_, uint256 totalSupply_, RewardPoolDistributor distributor_, address rewardToken_, address router_, uint256[5
+    ] memory feeSettings_) payable Auth(_msgSender()) {
         _name = name_;
         _symbol = symbol_;
         _decimals = decimals_;
@@ -1083,7 +1084,7 @@ contract Apocalypse is IERC20Extended, Auth {
      * 3 - Marketing fee
      * 4 - Fee denominator
      */
-    function _initializeFees(uint256[6] memory feeSettings_) internal {
+    function _initializeFees(uint256[5] memory feeSettings_) internal {
         _setFees(feeSettings_[0], feeSettings_[1], feeSettings_[2], feeSettings_[3], feeSettings_[4]);
     }
 
