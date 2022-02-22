@@ -1358,67 +1358,6 @@ abstract contract ERC721Enumerable is ERC721, IERC721Enumerable {
 }
 
 /**
- * @dev ERC721 token with storage based token URI management.
- */
-abstract contract ERC721URIStorage is ERC721 {
-    using Strings for uint256;
-
-    // Optional mapping for token URIs
-    mapping(uint256 => string) private _tokenURIs;
-
-    /**
-     * @dev See {IERC721Metadata-tokenURI}.
-     */
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-        require(_exists(tokenId), "ERC721URIStorage: URI query for nonexistent token");
-
-        string memory _tokenURI = _tokenURIs[tokenId];
-        string memory base = _baseURI();
-
-        // If there is no base URI, return the token URI.
-        if (bytes(base).length == 0) {
-            return _tokenURI;
-        }
-        // If both are set, concatenate the baseURI and tokenURI (via abi.encodePacked).
-        if (bytes(_tokenURI).length > 0) {
-            return string(abi.encodePacked(base, _tokenURI));
-        }
-
-        return super.tokenURI(tokenId);
-    }
-
-    /**
-     * @dev Sets `_tokenURI` as the tokenURI of `tokenId`.
-     *
-     * Requirements:
-     *
-     * - `tokenId` must exist.
-     */
-    function _setTokenURI(uint256 tokenId, string memory _tokenURI) internal virtual {
-        require(_exists(tokenId), "ERC721URIStorage: URI set of nonexistent token");
-        _tokenURIs[tokenId] = _tokenURI;
-    }
-
-    /**
-     * @dev Destroys `tokenId`.
-     * The approval is cleared when the token is burned.
-     *
-     * Requirements:
-     *
-     * - `tokenId` must exist.
-     *
-     * Emits a {Transfer} event.
-     */
-    function _burn(uint256 tokenId) internal virtual override {
-        super._burn(tokenId);
-
-        if (bytes(_tokenURIs[tokenId]).length != 0) {
-            delete _tokenURIs[tokenId];
-        }
-    }
-}
-
-/**
  * @title ERC721 Burnable Token
  * @dev ERC721 Token that can be irreversibly burned (destroyed).
  */
@@ -1494,7 +1433,7 @@ contract ApocalypseRandomizer {
 
 }
 
-contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Auth, ERC721Burnable {
+contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burnable {
     
 
     /** LIBRARY **/
@@ -1508,7 +1447,6 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
     string private cid;
     
     struct Character {
-        uint256 tokenID;
         uint256[3] charIndex;
         bool charEquip;
         uint256 charStatus;
@@ -1631,12 +1569,11 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
             commonBaseStat[1]        
         );
 
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_msgSender(), _tokenURI);
+        _safeMint(_msgSender());
 
     }
 
-    
+
     /** EVENT **/
 
     event MintNewCharacter(address _tokenOwner, uint256 _tokenID);
@@ -1764,22 +1701,22 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
     }
 
     function levelUp(uint256 _tokenID) external whenNotPaused authorized {
-        if (apocChar[_tokenID].charLevel < maxLevel) {
+        if (getCharLevel(_tokenID) < maxLevel) {
             apocChar[_tokenID].charLevel += 1;
-        } else if (apocChar[_tokenID].charLevel == maxLevel) {
+        } else if (getCharLevel(_tokenID) == maxLevel) {
             apocChar[_tokenID].charLevel = 1;
             apocChar[_tokenID].charXP = 0;
             apocChar[_tokenID].charNextXP = baseNextXP;
             
-            if (apocChar[_tokenID].angelModifier < maxAngelModifier) {
+            if (getAngelModifier(_tokenID) < maxAngelModifier) {
                 apocChar[_tokenID].angelModifier += 1;
             }
         }
     }
 
     function reduceHP(uint256 _tokenID, uint256 _reduceHP) external whenNotPaused authorized {
-        require (apocChar[_tokenID].charHP > 0);
-        if (apocChar[_tokenID].charHP <= _reduceHP) {
+        require (getCharHP(_tokenID) > 0);
+        if (getCharHP(_tokenID) <= _reduceHP) {
             apocChar[_tokenID].charHP = 0;
         } else {
             apocChar[_tokenID].charHP -= _reduceHP;
@@ -1787,15 +1724,15 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
     }
 
     function recoverHP(uint256 _tokenID, uint256 _recoverHP) external whenNotPaused authorized {
-        if (apocChar[_tokenID].charStatus <= 1) {
-            require (apocChar[_tokenID].charHP < baseHP);
+        if (getCharStatus(_tokenID) <= 1) {
+            require (getCharHP(_tokenID) < baseHP);
         } else if (apocChar[_tokenID].charStatus > 1) {
-            require (apocChar[_tokenID].charHP < upgradeBaseHP);
+            require (getCharHP(_tokenID) < upgradeBaseHP);
         }
 
-        if (apocChar[_tokenID].charStatus <= 1 && apocChar[_tokenID].charHP + _recoverHP >= baseHP) {
+        if (getCharStatus(_tokenID) <= 1 && getCharHP(_tokenID) + _recoverHP >= baseHP) {
             apocChar[_tokenID].charHP = baseHP;
-        } else if (apocChar[_tokenID].charStatus > 1 && apocChar[_tokenID].charHP + _recoverHP >= upgradeBaseHP) {
+        } else if (getCharStatus(_tokenID) > 1 && getCharHP(_tokenID) + _recoverHP >= upgradeBaseHP) {
             apocChar[_tokenID].charHP = upgradeBaseHP;
         } else {
             apocChar[_tokenID].charHP += _recoverHP;
@@ -1803,8 +1740,8 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
     }
 
     function receiveXP(uint256 _tokenID, uint256 _receiveXP) external whenNotPaused authorized {
-        require (apocChar[_tokenID].charXP < apocChar[_tokenID].charNextXP);
-        if (apocChar[_tokenID].charXP + _receiveXP >= apocChar[_tokenID].charNextXP) {
+        require (getCharXP(_tokenID) < getCharNextXP(_tokenID));
+        if (getCharXP(_tokenID) + _receiveXP >= getCharNextXP(_tokenID)) {
             apocChar[_tokenID].charXP = apocChar[_tokenID].charNextXP;
         } else {
             apocChar[_tokenID].charXP += _receiveXP;
@@ -1812,12 +1749,12 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
     }
 
     function updateNextXP(uint256 _tokenID, uint256 _charLevel) external whenNotPaused authorized {
-        require(apocChar[_tokenID].charXP == apocChar[_tokenID].charNextXP);
+        require(getCharXP(_tokenID) == getCharNextXP(_tokenID));
         apocChar[_tokenID].charNextXP = baseNextXP * _charLevel;
     }
 
     function increaseAngelModifier(uint256 _tokenID, uint256 _angelModifier) external whenNotPaused authorized {
-        require(apocChar[_tokenID].angelModifier < maxAngelModifier && _angelModifier >= 0);
+        require(getAngelModifier(_tokenID) < maxAngelModifier && _angelModifier <= maxAngelModifier );
         if (apocChar[_tokenID].angelModifier + _angelModifier > maxAngelModifier) {
             apocChar[_tokenID].angelModifier = maxAngelModifier;
         } else {
@@ -1826,7 +1763,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
     }
 
     function decreaseAngelModifier(uint256 _tokenID, uint256 _angelModifier) external whenNotPaused authorized {
-        require(apocChar[_tokenID].angelModifier < maxAngelModifier && _angelModifier >= 0);
+        require(getAngelModifier(_tokenID) < maxAngelModifier && _angelModifier < maxAngelModifier);
         if (apocChar[_tokenID].angelModifier < _angelModifier) {
             apocChar[_tokenID].angelModifier = 0;
         } else {
@@ -1838,11 +1775,55 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         return apocChar[_tokenID].charIndex;
     }
 
+    function getCharEquip(uint256 _tokenID) public view returns(bool) {
+        return apocChar[_tokenID].charEquip;
+    }
+
+    function getCharStatus(uint256 _tokenID) public view returns(uint256) {
+        return apocChar[_tokenID].charStatus;
+    }
+
+    function getCharType(uint256 _tokenID) public view returns(uint256) {
+        return apocChar[_tokenID].charType;
+    }
+
+    function getCharSkill(uint256 _tokenID) public view returns(uint256) {
+        return apocChar[_tokenID].charSkill;
+    }
+
+    function getCharLevel(uint256 _tokenID) public view returns(uint256) {
+        return apocChar[_tokenID].charLevel;
+    }
+
+    function getCharHP(uint256 _tokenID) public view returns(uint256) {
+        return apocChar[_tokenID].charHP;
+    }
+
+    function getCharXP(uint256 _tokenID) public view returns(uint256) {
+        return apocChar[_tokenID].charXP;
+    }
+
+    function getCharNextXP(uint256 _tokenID) public view returns(uint256) {
+        return apocChar[_tokenID].charNextXP;
+    }
+
+    function getBaseAttack(uint256 _tokenID) public view returns(uint256) {
+        return apocChar[_tokenID].baseAttack;
+    }
+
+    function getBaseDefence(uint256 _tokenID) public view returns(uint256) {
+        return apocChar[_tokenID].baseDefence;
+    }
+
+    function getAngelModifier(uint256 _tokenID) public view returns(uint256) {
+        return apocChar[_tokenID].angelModifier;
+    }
+
     function getCharImage(uint256 _tokenID) public view returns (string memory) {
-        string memory _angelModifier = Strings.toString(apocChar[_tokenID].angelModifier);
-        string memory _charStatus = Strings.toString(apocChar[_tokenID].charStatus);
-        string memory _charType = Strings.toString(apocChar[_tokenID].charType);
-        string memory _charSkill = Strings.toString(apocChar[_tokenID].charSkill);
+        string memory _angelModifier = Strings.toString(getAngelModifier(_tokenID));
+        string memory _charStatus = Strings.toString(getCharStatus(_tokenID));
+        string memory _charType = Strings.toString(getCharType(_tokenID));
+        string memory _charSkill = Strings.toString(getCharSkill(_tokenID));
         string memory imgURI;
 
         if (_tokenID == 0) {
@@ -1857,32 +1838,32 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
     function _burnUpgrade(uint256 _tokenID) internal {
         _burn(_tokenID);
 
-        if (apocChar[_tokenID].charStatus == 0) {
+        if (getCharStatus(_tokenID) == 0) {
             rareCurrentSupply -= 1;
-            currentRareCharSupply[apocChar[_tokenID].charType] -= 1;
-            currentSpecificRareCharSupply[apocChar[_tokenID].charType][apocChar[_tokenID].charSkill] -= 1;
-        } else if (apocChar[_tokenID].charStatus == 1) {
+            currentRareCharSupply[getCharType(_tokenID)] -= 1;
+            currentSpecificRareCharSupply[getCharType(_tokenID)][getCharSkill(_tokenID)] -= 1;
+        } else if (getCharStatus(_tokenID) == 1) {
             commonCurrentSupply -= 1;
-            currentCommonCharSupply[apocChar[_tokenID].charType] -= 1;
-            currentSpecificCommonCharSupply[apocChar[_tokenID].charType][apocChar[_tokenID].charSkill] -= 1;
+            currentCommonCharSupply[getCharType(_tokenID)] -= 1;
+            currentSpecificCommonCharSupply[getCharType(_tokenID)][getCharSkill(_tokenID)] -= 1;
         } else {
             upgradeCurrentSupply -= 1;
-            currentUpgradeCharSupply[apocChar[_tokenID].charType] -= 1;
-            currentSpecificUpgradeCharSupply[apocChar[_tokenID].charStatus][apocChar[_tokenID].charType][apocChar[_tokenID].charSkill] -= 1;
+            currentUpgradeCharSupply[getCharType(_tokenID)] -= 1;
+            currentSpecificUpgradeCharSupply[getCharStatus(_tokenID)][getCharType(_tokenID)][getCharSkill(_tokenID)] -= 1;
         }
 
     }
 
     function upgradeCharacter(address _owner, uint256 _tokenID1, uint256 _tokenID2, uint256 _nextStatus) external whenNotPaused authorized returns (bool, uint256) {
         require(
-            apocChar[_tokenID1].charStatus <= maxUpgradeStatus &&
-            apocChar[_tokenID2].charStatus <= maxUpgradeStatus &&
-            apocChar[_tokenID1].charType == apocChar[_tokenID2].charType &&
-            apocChar[_tokenID1].charSkill == apocChar[_tokenID2].charSkill
+            getCharStatus(_tokenID1) <= maxUpgradeStatus &&
+            getCharStatus(_tokenID2) <= maxUpgradeStatus &&
+            getCharType(_tokenID1) == getCharType(_tokenID2) &&
+            getCharSkill(_tokenID1) == getCharSkill(_tokenID2)
         );
 
-        uint256 _charType = apocChar[_tokenID1].charType;
-        uint256 _charSkill = apocChar[_tokenID2].charSkill;
+        uint256 _charType = getCharType(_tokenID1);
+        uint256 _charSkill = getCharSkill(_tokenID2);
 
         uint256 userAddress = uint256(uint160(_msgSender()));
         uint256 targetBlock = block.number + (upgradePercentage[1]/upgradePercentage[0]);
@@ -1910,8 +1891,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
             currentSpecificUpgradeCharSupply[_nextStatus][_charType][_charSkill] += 1;
 
             uint256 tokenID = _tokenIdCounter.current();
-            string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-            _safeMint(_owner, _tokenURI);
+            _safeMint(_owner);
 
             _burnUpgrade(_tokenID1);
             _burnUpgrade(_tokenID2);
@@ -2024,8 +2004,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
             currentSpecificUpgradeCharSupply[_charStatus][_charType][_charSkill] += 1;
         }
 
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
+        _safeMint(_owner);
     }
 
     function dropRandom(
@@ -2103,8 +2082,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         currentSpecificRareCharSupply[mixer[0]][mixer[1]] += 1;
 
         uint256 tokenID = _tokenIdCounter.current();
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
+        _safeMint(_owner);
 
         return (tokenID);
     }
@@ -2135,8 +2113,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         currentSpecificRareCharSupply[mixer[0]][mixer[1]] += 1;
 
         uint256 tokenID = _tokenIdCounter.current();
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
+        _safeMint(_owner);
 
         emit AirdropCharacter(_owner, tokenID);
 
@@ -2197,8 +2174,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         currentSpecificCommonCharSupply[mixer[0]][mixer[1]] += 1;
 
         uint256 tokenID = _tokenIdCounter.current();
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
+        _safeMint(_owner);
 
         return (tokenID);
 
@@ -2230,8 +2206,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         currentSpecificCommonCharSupply[mixer[0]][mixer[1]] += 1;
 
         uint256 tokenID = _tokenIdCounter.current();
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
+        _safeMint(_owner);
         
         emit AirdropCharacter(_owner, tokenID);
 
@@ -2260,7 +2235,6 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         uint256 _baseDefence        
     ) internal {
         Character memory _apocChar = Character({
-            tokenID: _tokenIdCounter.current(),
             charIndex: _currentSupplyInfo,
             charEquip: false,
             charStatus: _charStatus,
@@ -2278,11 +2252,10 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
         apocChar.push(_apocChar);
     }
 
-    function _safeMint(address to, string memory uri) internal {
+    function _safeMint(address to) internal {
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
-        _setTokenURI(tokenId, uri);
 
         emit MintNewCharacter(to, tokenId);
     }
@@ -2296,19 +2269,6 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, ERC721URIStorage, Paus
     }
 
     // The following functions are overrides required by Solidity.
-
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
-        super._burn(tokenId);
-    }
-
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
-        return super.tokenURI(tokenId);
-    }
 
     function supportsInterface(bytes4 interfaceId)
         public
