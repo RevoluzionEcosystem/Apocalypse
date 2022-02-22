@@ -722,6 +722,7 @@ contract RewardPoolDistributor is IRewardPoolDistributor, Auth {
 
     /* LIBRARY */
     using SafeMath for uint256;
+    using Address for address;
 
 
     /* DATA */
@@ -775,6 +776,7 @@ contract RewardPoolDistributor is IRewardPoolDistributor, Auth {
         uint256 dailyLimit_
     ) Auth(_msgSender()) {
         _token = _msgSender();
+        _owner = _msgSender();
         rewardToken = IERC20Extended(rewardToken_);
         router = IUniswapV2Router02(router_);
         timeLimit = 1 days;
@@ -806,7 +808,7 @@ contract RewardPoolDistributor is IRewardPoolDistributor, Auth {
         rewardToken.transfer(_newPool, rewardBalance);
     }
 
-    function deposit() external payable override onlyTokenAndOwner authorized {
+    function deposit() external payable override authorized onlyTokenAndOwner {
         address[] memory path = new address[](2);
         path[0] = router.WETH();
         path[1] = address(rewardToken);
@@ -843,8 +845,13 @@ contract RewardPoolDistributor is IRewardPoolDistributor, Auth {
     function resetTimeLimit(address _user) internal {
         uint256 timeDifference = block.timestamp.sub(rewards[_user].limitReset);
         uint256 timeCycle = timeDifference.div(timeLimit);
-        rewards[_user].currentLimit += dailyLimit.mul(timeCycle);
-        rewards[_user].limitReset += timeLimit.mul(timeCycle);
+        if (rewards[_user].limitReset == 0) {
+            rewards[_user].currentLimit += dailyLimit;
+            rewards[_user].limitReset = block.timestamp;
+        } else {
+            rewards[_user].currentLimit += dailyLimit.mul(timeCycle);
+            rewards[_user].limitReset += timeLimit.mul(timeCycle);
+        }
     }
 
     function needResetTimeLimit(address _user) internal view returns (bool) {
