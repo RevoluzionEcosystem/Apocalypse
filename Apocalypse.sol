@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Revoluzion Token
- * Future ecosystem development would include swap/dex system with chart integration,
- * Portfolio viewer, dex buy/sell order and web base Play to Earn NFT game Apocalypse.
+ * @title Apocalypse Token
+ * 
+ * @description The Apocalypse Play-To-Earn NFT game is launching on the 28th February 2022.
+ * Presale launch on Pinksale launchpad at 27th 12:00 P.M. UTC.
+ * One of our many projects under the Revoluzion ecosystem.
  *
  * Website : revoluzion.io
  * Apoc Website : apocgame.io
@@ -19,7 +21,6 @@
 
 
 pragma solidity ^0.8.12;
-
 
 
 /** LIBRARIES **/
@@ -425,7 +426,6 @@ library SafeMath {
     }
 }
 
-
 /**
  * @title Context
  * 
@@ -530,7 +530,6 @@ abstract contract Auth is Context {
 }
 
 
-
 /** IERC20 STANDARD **/
 
 /**
@@ -630,7 +629,6 @@ interface IERC20Extended {
 }
 
 
-
 /** UNISWAP V2 INTERFACES **/
 
 interface IUniswapV2Factory {
@@ -707,14 +705,19 @@ interface IUniswapV2Router02 is IUniswapV2Router01 {
 }
 
 
-
 /** REWARD POOL DISTRIBUTOR **/
 
 interface IRewardPoolDistributor {
+
     function deposit() external payable;
+
+    function distributeReward(address _user, uint256 _amount) external;
+
+    function withdrawReward(uint256 _amount) external;
+
 }
 
-contract RewardPoolDistributor is IRewardPoolDistributor, Context {
+contract RewardPoolDistributor is IRewardPoolDistributor, Auth {
     
 
     /* LIBRARY */
@@ -724,10 +727,28 @@ contract RewardPoolDistributor is IRewardPoolDistributor, Context {
     /* DATA */
     IERC20Extended public rewardToken;
     IUniswapV2Router02 public router;
+    
+    struct Reward {
+        uint256 totalReceived;
+        uint256 totalAccumulated;
+        uint256 currentLimit;
+        uint256 limitReset;
+    }
+
     address public _token;
     address public _owner;
+
     bool public initialized;
     
+    uint256 public totalDistributed;
+    uint256 public dailyLimit;
+    uint256 public timeLimit;
+
+    address private constant DEAD = address(0xdead);
+    address private constant ZERO = address(0);
+
+    mapping(address => Reward) public rewards;
+
 
     /* MODIFIER */
     modifier initializer() {
@@ -748,10 +769,16 @@ contract RewardPoolDistributor is IRewardPoolDistributor, Context {
 
 
     /* CONSTRUCTOR */
-    constructor(address rewardToken_, address router_) {
+    constructor(
+        address rewardToken_,
+        address router_,
+        uint256 dailyLimit_
+    ) Auth(_msgSender()) {
         _token = _msgSender();
         rewardToken = IERC20Extended(rewardToken_);
         router = IUniswapV2Router02(router_);
+        timeLimit = 1 days;
+        dailyLimit = dailyLimit_ * (10**rewardToken.decimals());
     }
 
 
@@ -765,7 +792,21 @@ contract RewardPoolDistributor is IRewardPoolDistributor, Context {
         _token = token_;
     }
 
-    function deposit() external payable override onlyTokenAndOwner {
+    function setDailyLimit(uint256 dailyLimit_) external authorized {
+        dailyLimit = dailyLimit_ * (10**rewardToken.decimals());
+    }
+
+    function setTimeLimit(uint256 timeLimit_) external authorized {
+        timeLimit = timeLimit_;
+    }
+
+    function migratePool(address _newPool) external onlyOwner {
+        require(_newPool != ZERO && _newPool != DEAD && _newPool != _owner);
+        uint256 rewardBalance = rewardToken.balanceOf(address(this));
+        rewardToken.transfer(_newPool, rewardBalance);
+    }
+
+    function deposit() external payable override onlyTokenAndOwner authorized {
         address[] memory path = new address[](2);
         path[0] = router.WETH();
         path[1] = address(rewardToken);
@@ -775,13 +816,47 @@ contract RewardPoolDistributor is IRewardPoolDistributor, Context {
         } (0, path, address(this), block.timestamp);
     }
 
-}
+    /**
+     * @dev Distribute reward to the user and update reward information.
+     */
+    function distributeReward(address _user, uint256 _amount) external authorized {
+        require(_user != DEAD && _user != ZERO && _amount > 0);
+        if (needResetTimeLimit(_msgSender()) == true) {
+            resetTimeLimit(_msgSender());
+        }
+        rewards[_user].totalAccumulated = rewards[_user].totalAccumulated.add(_amount);
+    }
 
+    function withdrawReward(uint256 _amount) external {
+        if (needResetTimeLimit(_msgSender()) == true) {
+            resetTimeLimit(_msgSender());
+        } 
+        require(rewards[_msgSender()].currentLimit >= _amount , "Exceed daily limit.");
+        
+        totalDistributed = totalDistributed.add(_amount);
+        rewardToken.transfer(_msgSender(), _amount);
+        rewards[_msgSender()].totalReceived = rewards[_msgSender()].totalReceived.add(_amount);
+        rewards[_msgSender()].totalAccumulated = rewards[_msgSender()].totalAccumulated.sub(_amount);
+        rewards[_msgSender()].currentLimit = rewards[_msgSender()].currentLimit.sub(_amount);
+    }
+
+    function resetTimeLimit(address _user) internal {
+        uint256 timeDifference = block.timestamp.sub(rewards[_user].limitReset);
+        uint256 timeCycle = timeDifference.div(timeLimit);
+        rewards[_user].currentLimit += dailyLimit.mul(timeCycle);
+        rewards[_user].limitReset += timeLimit.mul(timeCycle);
+    }
+
+    function needResetTimeLimit(address _user) internal view returns (bool) {
+        return block.timestamp >= rewards[_user].limitReset.add(timeLimit);
+    }
+
+}
 
 
 /** APOCALYPSE TOKEN **/
 
-contract RevoluzionApocalypse is IERC20Extended, Auth {
+contract Apocalypse is IERC20Extended, Auth {
 
 
     /* LIBRARY*/
@@ -809,7 +884,7 @@ contract RevoluzionApocalypse is IERC20Extended, Auth {
 
     uint256 public liquidityFee;
     uint256 public buybackFee;
-    uint256 public reflectionFee;
+    uint256 public rewardFee;
     uint256 public marketingFee;
     uint256 public totalFee;
     uint256 public feeDenominator;
@@ -861,8 +936,16 @@ contract RevoluzionApocalypse is IERC20Extended, Auth {
 
 
     /* CONSTRUCTOR */
-    constructor(string memory name_, string memory symbol_, uint8 decimals_, uint256 totalSupply_, RewardPoolDistributor distributor_, address rewardToken_, address router_, uint256[5
-    ] memory feeSettings_) payable Auth(_msgSender()) {
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_,
+        uint256 totalSupply_,
+        RewardPoolDistributor distributor_,
+        address rewardToken_,
+        address router_,
+        uint256[5] memory feeSettings_
+    ) payable Auth(_msgSender()) {
         _name = name_;
         _symbol = symbol_;
         _decimals = decimals_;
@@ -1080,7 +1163,7 @@ contract RevoluzionApocalypse is IERC20Extended, Auth {
      * NOTE:
      * 0 - Liquidity fee
      * 1 - Buyback fee (in case needed in the future)
-     * 2 - Reflection fee
+     * 2 - Reward fee
      * 3 - Marketing fee
      * 4 - Fee denominator
      */
@@ -1091,19 +1174,31 @@ contract RevoluzionApocalypse is IERC20Extended, Auth {
     /**
      * @dev Set all the fee settings.
      */
-    function setFees(uint256 _liquidityFee, uint256 _buybackFee, uint256 _reflectionFee, uint256 _marketingFee, uint256 _feeDenominator) public authorized {
-        _setFees(_liquidityFee, _buybackFee, _reflectionFee, _marketingFee, _feeDenominator);
+    function setFees(
+        uint256 _liquidityFee,
+        uint256 _buybackFee,
+        uint256 _rewardFee,
+        uint256 _marketingFee,
+        uint256 _feeDenominator
+    ) public authorized {
+        _setFees(_liquidityFee, _buybackFee, _rewardFee, _marketingFee, _feeDenominator);
     }
 
     /**
      * @dev Run internally to set all the fee settings and ensure that total fee is not more than 10%. 
      */
-    function _setFees(uint256 _liquidityFee, uint256 _buybackFee, uint256 _reflectionFee, uint256 _marketingFee, uint256 _feeDenominator) internal {
+    function _setFees(
+        uint256 _liquidityFee,
+        uint256 _buybackFee,
+        uint256 _rewardFee,
+        uint256 _marketingFee,
+        uint256 _feeDenominator
+    ) internal {
         liquidityFee = _liquidityFee;
         buybackFee = _buybackFee;
-        reflectionFee = _reflectionFee;
+        rewardFee = _rewardFee;
         marketingFee = _marketingFee;
-        totalFee = _liquidityFee.add(_buybackFee).add(_reflectionFee).add(_marketingFee);
+        totalFee = _liquidityFee.add(_buybackFee).add(_rewardFee).add(_marketingFee);
         feeDenominator = _feeDenominator;
         require(totalFee < feeDenominator.div(100).mul(10), "Total fee should not be greater than 10%.");
     }
@@ -1212,11 +1307,11 @@ contract RevoluzionApocalypse is IERC20Extended, Auth {
         uint256 totalBNBFee = totalFee.sub(dynamicLiquidityFee.div(2));
 
         uint256 amountBNBLiquidity = amountBNB.mul(dynamicLiquidityFee).div(totalBNBFee).div(2);
-        uint256 amountBNBReflection = amountBNB.mul(reflectionFee).div(totalBNBFee);
+        uint256 amountBNBReward = amountBNB.mul(rewardFee).div(totalBNBFee);
         uint256 amountBNBMarketing = amountBNB.mul(marketingFee).div(totalBNBFee);
 
         try distributor.deposit {
-            value: amountBNBReflection
+            value: amountBNBReward
         } () {} catch {}
 
         payable(marketingFeeReceiver).transfer(amountBNBMarketing);
