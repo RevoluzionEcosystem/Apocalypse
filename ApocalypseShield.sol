@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.11;
+pragma solidity ^0.8.12;
 
 
 /** LIBRARY **/
@@ -342,6 +342,10 @@ abstract contract Context {
     function _msgData() internal view virtual returns (bytes calldata) {
         return msg.data;
     }
+
+    function _msgValue() internal view virtual returns (uint256) {
+        return msg.value;
+    }
 }
 
 /**
@@ -513,7 +517,6 @@ abstract contract Pausable is Context {
         emit Unpaused(_msgSender());
     }
 }
-
 
 /** ERC STANDARD **/
 
@@ -1358,67 +1361,6 @@ abstract contract ERC721Enumerable is ERC721, IERC721Enumerable {
 }
 
 /**
- * @dev ERC721 token with storage based token URI management.
- */
-abstract contract ERC721URIStorage is ERC721 {
-    using Strings for uint256;
-
-    // Optional mapping for token URIs
-    mapping(uint256 => string) private _tokenURIs;
-
-    /**
-     * @dev See {IERC721Metadata-tokenURI}.
-     */
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-        require(_exists(tokenId), "ERC721URIStorage: URI query for nonexistent token");
-
-        string memory _tokenURI = _tokenURIs[tokenId];
-        string memory base = _baseURI();
-
-        // If there is no base URI, return the token URI.
-        if (bytes(base).length == 0) {
-            return _tokenURI;
-        }
-        // If both are set, concatenate the baseURI and tokenURI (via abi.encodePacked).
-        if (bytes(_tokenURI).length > 0) {
-            return string(abi.encodePacked(base, _tokenURI));
-        }
-
-        return super.tokenURI(tokenId);
-    }
-
-    /**
-     * @dev Sets `_tokenURI` as the tokenURI of `tokenId`.
-     *
-     * Requirements:
-     *
-     * - `tokenId` must exist.
-     */
-    function _setTokenURI(uint256 tokenId, string memory _tokenURI) internal virtual {
-        require(_exists(tokenId), "ERC721URIStorage: URI set of nonexistent token");
-        _tokenURIs[tokenId] = _tokenURI;
-    }
-
-    /**
-     * @dev Destroys `tokenId`.
-     * The approval is cleared when the token is burned.
-     *
-     * Requirements:
-     *
-     * - `tokenId` must exist.
-     *
-     * Emits a {Transfer} event.
-     */
-    function _burn(uint256 tokenId) internal virtual override {
-        super._burn(tokenId);
-
-        if (bytes(_tokenURIs[tokenId]).length != 0) {
-            delete _tokenURIs[tokenId];
-        }
-    }
-}
-
-/**
  * @title ERC721 Burnable Token
  * @dev ERC721 Token that can be irreversibly burned (destroyed).
  */
@@ -1494,7 +1436,7 @@ contract ApocalypseRandomizer {
 
 }
 
-contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Auth, ERC721Burnable {
+contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burnable {
     
 
     /** LIBRARY **/
@@ -1523,7 +1465,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
 
     uint256[] public shieldStatus;
     uint256[] public shieldType;
-    uint256[] public shieldAttack;    
+    uint256[] public shieldDefence;    
     uint256[] public shieldUpChance;
     uint256[] public shieldDepletion;
 
@@ -1554,6 +1496,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
     mapping(uint256 => uint256) currentRareShieldSupply;
     mapping(uint256 => mapping(uint256 => uint256)) public currentSpecificUpgradeShieldSupply;
     
+
     /** CONSTRUCTOR **/
     constructor(
         string memory _name,
@@ -1570,9 +1513,9 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
 
         shieldStatus = [0,1];
         shieldType = [1,2];
-        shieldAttack = [3,6,10,15,20,30,50,70,100,120];
+        shieldDefence = [2,4,8,10,15,20,30,40,50,100];
         shieldUpChance = [40,38,35,32,28,23,20,15,10,5];
-        shieldDepletion = [0,0,0,0,20,30,40,60,100,100];
+        shieldDepletion = [10,10,20,30,40,50,60,80,100,100];
         commonShieldEndurance = [1000,1500,2000,2500,3000,3500,4000,4500,5000,10000];
 
         maxLevel = 10;
@@ -1582,10 +1525,10 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         
         rarePercentage = [5, 4];
 
-        addSpecificMaxShieldSupply(0, 1, 5); // 5 medusa shield
-        addSpecificMaxShieldSupply(0, 2, 5); // 5 devlin shield
+        addSpecificMaxShieldSupply(0, 1, 5); // 5 rare medusa
+        addSpecificMaxShieldSupply(0, 2, 5); // 5 rare devlin
 
-        addSpecificMaxShieldSupply(1, 1, 100000); // 100,000 tower shield
+        addSpecificMaxShieldSupply(1, 1, 100000); // 100,000 universal tower
 
         _createShield(
             [uint256(0),uint256(0)],
@@ -1596,8 +1539,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
             commonBaseStat[1]
         );
 
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_msgSender(), _tokenURI);
+        _safeMint(_msgSender());
 
     }
 
@@ -1610,13 +1552,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
 
     /** FUNCTION **/
 
-    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
-        randomizer = _randomizer;
-    }
-
-    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
-        return randomizer;
-    }
+    /* General functions */
 
     function pause() public whenNotPaused authorized {
         _pause();
@@ -1642,6 +1578,18 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         return URI;
     }
 
+    /* Randomizer functions */
+
+    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
+        randomizer = _randomizer;
+    }
+
+    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
+        return randomizer;
+    }
+
+    /* Supply functions */
+
     function addSpecificMaxShieldSupply(
         uint256 _shieldStatus,
         uint256 _shieldType,
@@ -1665,6 +1613,8 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         emit AddShieldSupply(_maxShieldSupply);
     }
 
+    /* Default stats functions */
+
     function setUpgradePercentage(uint256 _upgradeNumerator, uint256 _upgradePower) public authorized {
         require(_upgradeNumerator > 0 && _upgradePower > 0);
         upgradePercentage = [_upgradeNumerator, _upgradePower];
@@ -1675,10 +1625,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         rarePercentage = [_rareNumerator, _rarePower];
     }
 
-    function setDefaultInfo(
-        uint256 _maxLevel,
-        uint256 _maxUpgradeStatus
-    ) public authorized {
+    function setDefaultInfo(uint256 _maxLevel, uint256 _maxUpgradeStatus) public authorized {
         require(_maxLevel > 0);
         maxLevel = _maxLevel;
         maxUpgradeStatus = _maxUpgradeStatus;
@@ -1702,9 +1649,9 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         }
     }
     
-    function addShieldAttack(uint256[] memory _shieldAttack) public authorized {
-        for(uint256 i = 0; i < _shieldAttack.length; i++){
-            shieldAttack.push(_shieldAttack[i]);
+    function addShieldDefence(uint256[] memory _shieldDefence) public authorized {
+        for(uint256 i = 0; i < _shieldDefence.length; i++){
+            shieldDefence.push(_shieldDefence[i]);
         }
     }
     
@@ -1735,9 +1682,9 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         rareShieldEndurance[_shieldLevel - 1] = _rareShieldEndurance;
     }
     
-    function updateShieldAttack(uint256 _shieldLevel, uint256 _shieldAttack) public authorized {
-        require(_shieldLevel != 0 && _shieldLevel < shieldAttack.length && _shieldAttack > 0);
-        shieldAttack[_shieldLevel - 1] = _shieldAttack;
+    function updateShieldDefence(uint256 _shieldLevel, uint256 _shieldDefence) public authorized {
+        require(_shieldLevel != 0 && _shieldLevel < shieldDefence.length && _shieldDefence > 0);
+        shieldDefence[_shieldLevel - 1] = _shieldDefence;
     }
     
     function updateShieldUpChance(uint256 _shieldLevel, uint256 _shieldUpChance) public authorized {
@@ -1776,6 +1723,10 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
             shieldType.push(_typeID[i]);
         }
     }
+
+    /* Shield attributes functions */
+
+    // Setter
 
     function updateShieldEquip(uint256 _tokenID, bool _equip) external whenNotPaused authorized {
         require(apocShield[_tokenID].shieldEquip != _equip);
@@ -1828,8 +1779,34 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         }
     }
 
+    // Getter
+
     function getShieldIndex(uint256 _tokenID) public view returns(uint256[2] memory) {
         return apocShield[_tokenID].shieldIndex;
+    }
+
+    function getShieldEquip(uint256 _tokenID) public view returns(bool) {
+        return apocShield[_tokenID].shieldEquip;
+    }
+
+    function getShieldStatus(uint256 _tokenID) public view returns(uint256) {
+        return apocShield[_tokenID].shieldStatus;
+    }
+
+    function getShieldType(uint256 _tokenID) public view returns(uint256) {
+        return apocShield[_tokenID].shieldType;
+    }
+
+    function getShieldLevel(uint256 _tokenID) public view returns(uint256) {
+        return apocShield[_tokenID].shieldLevel;
+    }
+
+    function getShieldEndurance(uint256 _tokenID) public view returns(uint256) {
+        return apocShield[_tokenID].shieldEndurance;
+    }
+
+    function getBaseDefence(uint256 _tokenID) public view returns(uint256) {
+        return apocShield[_tokenID].baseDefence;
     }
 
     function getShieldImage(uint256 _tokenID) public view returns (string memory) {
@@ -1846,6 +1823,49 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
 
         return imgURI;
     }
+
+    /* NFT general logic functions */
+
+    function _mixer(address _owner) internal view returns (uint256){
+        uint256 userAddress = uint256(uint160(_owner));
+        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
+
+        uint256 _shieldType = randomizer.sliceNumber(random, shieldType.length, 1, shieldType.length);
+
+        return _shieldType;
+    }
+
+    function _createShield(
+        uint256[2] memory _currentSupplyInfo,
+        uint256 _shieldStatus,
+        uint256 _shieldType,
+        uint256 _shieldLevel,
+        uint256 _shieldEndurance,
+        uint256 _baseDefence
+    ) internal {
+        Shield memory _apocShield = Shield({
+            tokenID: _tokenIdCounter.current(),
+            shieldIndex: _currentSupplyInfo,
+            shieldEquip: false,
+            shieldStatus: _shieldStatus,
+            shieldType: _shieldType,
+            shieldLevel: _shieldLevel,
+            shieldEndurance: _shieldEndurance,
+            baseDefence: _baseDefence
+        });
+        
+        apocShield.push(_apocShield);
+    }
+
+    function _safeMint(address to) internal {
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(to, tokenId);
+
+        emit MintNewShield(to, tokenId);
+    }
+
+    /* NFT upgrade logic functions */
 
     function _burnUpgrade(uint256 _tokenID) internal {
         _burn(_tokenID);
@@ -1894,8 +1914,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
             currentSpecificUpgradeShieldSupply[_nextStatus][_shieldType] += 1;
 
             uint256 tokenID = _tokenIdCounter.current();
-            string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-            _safeMint(_owner, _tokenURI);
+            _safeMint(_owner);
 
             _burnUpgrade(_tokenID1);
             _burnUpgrade(_tokenID2);
@@ -1910,14 +1929,16 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
 
     }
 
-    function mintNewShield() external whenNotPaused authorized returns (uint256){
+    /* NFT mint logic functions */
+
+    function mintNewShield(address _owner) external whenNotPaused authorized returns (uint256){
 
         require(totalSupply() < totalMaxSupply);
 
         if (commonCurrentSupply == maxShieldSupply[1] && rareCurrentSupply < maxShieldSupply[0]) {
-            return _mintRare(_msgSender());
+            return _mintRare(_owner);
         } else if (commonCurrentSupply < maxShieldSupply[1] && rareCurrentSupply < maxShieldSupply[0]) {
-            uint256 userAddress = uint256(uint160(_msgSender()));
+            uint256 userAddress = uint256(uint160(_owner));
             uint256 shieldMixer = shieldStatus.length + shieldType.length;
             uint256 targetBlock = block.number + shieldMixer;
             uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, targetBlock);
@@ -1925,15 +1946,100 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
             uint256 rareCheck = randomizer.sliceNumber(random, 10, rarePercentage[1], shieldMixer);
 
             if (rareCheck <= rarePercentage[0]) {
-                return _mintRare(_msgSender());
+                return _mintRare(_owner);
             } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
             }
         } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
         }
 
     }
+
+    function _mintRare(address _owner) internal returns (uint256) {
+        require(rareCurrentSupply < maxShieldSupply[0]);
+
+        uint256 mixer = _mixer(_owner);
+        
+        uint256 typeIterations = 0;
+
+        while(currentRareShieldSupply[mixer] == maxRareShieldSupply[mixer]) {
+            require(typeIterations < shieldType.length);
+            mixer += 1;
+            if(mixer > shieldType.length) {
+                mixer -= shieldType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations >= shieldType.length) {
+            return (0);
+        }
+
+        uint256[2] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareShieldSupply[mixer] + 1];
+
+        _createShield(
+            _currentSupplyInfo,
+            0,
+            mixer,
+            0,
+            rareBaseStat[0],
+            rareBaseStat[1]
+        );
+
+        rareCurrentSupply += 1;
+        currentRareShieldSupply[mixer] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+    }
+
+    function _mintCommon(address _owner) internal returns (uint256) {
+        require(commonCurrentSupply < maxShieldSupply[1]);
+
+        uint256 mixer = _mixer(_owner);
+        
+        uint256 typeIterations = 0;
+
+        while(currentCommonShieldSupply[mixer] == maxCommonShieldSupply[mixer]) {
+            require(typeIterations < shieldType.length);
+            mixer += 1;
+            if(mixer > shieldType.length) {
+                mixer -= shieldType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations >= shieldType.length) {
+            return (0);
+        }
+
+        uint256[2] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonShieldSupply[mixer] + 1];
+
+        _createShield(
+            _currentSupplyInfo,
+            1,
+            mixer,
+            0,
+            commonBaseStat[0],
+            commonBaseStat[1]
+        );
+
+        commonCurrentSupply += 1;
+        currentCommonShieldSupply[mixer] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+
+    }
+
+    /* NFT drop logic functions */
 
     function dropSpecific(
         address _owner,
@@ -1987,8 +2093,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
             currentSpecificUpgradeShieldSupply[_shieldStatus][_shieldType] += 1;
         }
 
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
+        _safeMint(_owner);
     }
 
     function dropRandom(
@@ -2011,49 +2116,13 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
 
     }
 
-    function _mintRare(address _owner) internal returns (uint256) {
-        require(rareCurrentSupply < maxShieldSupply[0]);
-
-        uint256 mixer = _mixer(_owner);
-        
-        uint256 typeIterations = 0;
-
-        while(currentRareShieldSupply[mixer] == maxRareShieldSupply[mixer]) {
-            require(typeIterations < shieldType.length);
-            mixer += 1;
-            if(mixer > shieldType.length) {
-                mixer -= shieldType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations >= shieldType.length) {
-            return (0);
-        }
-
-        uint256[2] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareShieldSupply[mixer] + 1];
-
-        _createShield(
-            _currentSupplyInfo,
-            0,
-            mixer,
-            0,
-            rareBaseStat[0],
-            rareBaseStat[1]
-        );
-
-        rareCurrentSupply += 1;
-        currentRareShieldSupply[mixer] += 1;
-
-        uint256 tokenID = _tokenIdCounter.current();
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
-
-        return (tokenID);
+    function mobDropRare(
+        address _owner
+    ) external whenNotPaused authorized returns (uint256) {
+        return _mintRareDrop(_owner);
     }
 
-    function _mintRareDrop(address _owner) internal {
+    function _mintRareDrop(address _owner) internal returns (uint256) {
         require(rareCurrentSupply < maxShieldSupply[0]);
 
         uint256 mixer = _mixer(_owner);
@@ -2074,54 +2143,13 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         rareCurrentSupply += 1;
         currentRareShieldSupply[mixer] += 1;
 
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
-    }
-
-    function _mintCommon(address _owner) internal returns (uint256) {
-        require(commonCurrentSupply < maxShieldSupply[1]);
-
-        uint256 mixer = _mixer(_owner);
-        
-        uint256 typeIterations = 0;
-
-        while(currentCommonShieldSupply[mixer] == maxCommonShieldSupply[mixer]) {
-            require(typeIterations < shieldType.length);
-            mixer += 1;
-            if(mixer > shieldType.length) {
-                mixer -= shieldType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations >= shieldType.length) {
-            return (0);
-        }
-
-        uint256[2] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonShieldSupply[mixer] + 1];
-
-        _createShield(
-            _currentSupplyInfo,
-            1,
-            mixer,
-            0,
-            commonBaseStat[0],
-            commonBaseStat[1]
-        );
-
-        commonCurrentSupply += 1;
-        currentCommonShieldSupply[mixer] += 1;
-
         uint256 tokenID = _tokenIdCounter.current();
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
+        _safeMint(_owner);
 
-        return (tokenID);
-
+        return tokenID;
     }
 
-    function _mintCommonDrop(address _owner) internal {
+    function _mintCommonDrop(address _owner) internal returns (uint256) {
         require(commonCurrentSupply < maxShieldSupply[1]);
 
         uint256 mixer = _mixer(_owner);
@@ -2142,49 +2170,13 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         commonCurrentSupply += 1;
         currentCommonShieldSupply[mixer] += 1;
 
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return tokenID;
     }
 
-    function _mixer(address _owner) internal view returns (uint256){
-        uint256 userAddress = uint256(uint160(_owner));
-        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
-
-        uint256 _shieldType = randomizer.sliceNumber(random, shieldType.length, 1, shieldType.length);
-
-        return _shieldType;
-    }
-
-    function _createShield(
-        uint256[2] memory _currentSupplyInfo,
-        uint256 _shieldStatus,
-        uint256 _shieldType,
-        uint256 _shieldLevel,
-        uint256 _shieldEndurance,
-        uint256 _baseDefence
-    ) internal {
-        Shield memory _apocShield = Shield({
-            tokenID: _tokenIdCounter.current(),
-            shieldIndex: _currentSupplyInfo,
-            shieldEquip: false,
-            shieldStatus: _shieldStatus,
-            shieldType: _shieldType,
-            shieldLevel: _shieldLevel,
-            shieldEndurance: _shieldEndurance,
-            baseDefence: _baseDefence
-        });
-        
-        apocShield.push(_apocShield);
-    }
-
-    function _safeMint(address to, string memory uri) internal {
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        _safeMint(to, tokenId);
-        _setTokenURI(tokenId, uri);
-
-        emit MintNewShield(to, tokenId);
-    }
+    /* NFT ERC logic functions */
 
     function _beforeTokenTransfer(address from, address to, uint256 tokenId)
         internal
@@ -2195,19 +2187,6 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
     }
 
     // The following functions are overrides required by Solidity.
-
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
-        super._burn(tokenId);
-    }
-
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
-        return super.tokenURI(tokenId);
-    }
 
     function supportsInterface(bytes4 interfaceId)
         public
