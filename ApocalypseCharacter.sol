@@ -1702,6 +1702,8 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
 
     /* Character attributes functions */
 
+    // Setter
+
     function updateCharacterEquip(uint256 _tokenID, bool _equip) external whenNotPaused authorized {
         require(apocChar[_tokenID].charEquip != _equip);
         apocChar[_tokenID].charEquip = _equip;
@@ -1778,6 +1780,8 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
             apocChar[_tokenID].angelModifier -= _angelModifier;
         }
     }
+
+    // Getter
 
     function getCharIndex(uint256 _tokenID) public view returns(uint256[3] memory) {
         return apocChar[_tokenID].charIndex;
