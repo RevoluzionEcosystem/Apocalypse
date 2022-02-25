@@ -1678,15 +1678,30 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         require(_weaponLevel != 0 && _weaponLevel < commonWeaponEndurance.length && _commonWeaponEndurance > 0);
         commonWeaponEndurance[_weaponLevel - 1] = _commonWeaponEndurance;
     }
+
+    function getCommonWeaponEndurance(uint256 _weaponLevel) public view returns (uint256) {
+        require(_weaponLevel != 0 && _weaponLevel < commonWeaponEndurance.length);
+        return commonWeaponEndurance[_weaponLevel - 1];
+    }
     
     function updateUpgradeWeaponEndurance(uint256 _weaponLevel, uint256 _upgradeWeaponEndurance) public authorized {
         require(_weaponLevel != 0 && _weaponLevel < upgradeWeaponEndurance.length && _upgradeWeaponEndurance > 0);
         upgradeWeaponEndurance[_weaponLevel - 1] = _upgradeWeaponEndurance;
     }
+
+    function getUpgradeWeaponEndurance(uint256 _weaponLevel) public view returns (uint256) {
+        require(_weaponLevel != 0 && _weaponLevel < upgradeWeaponEndurance.length);
+        return upgradeWeaponEndurance[_weaponLevel - 1];
+    }
     
     function updateRareWeaponEndurance(uint256 _weaponLevel, uint256 _rareWeaponEndurance) public authorized {
         require(_weaponLevel != 0 && _weaponLevel < rareWeaponEndurance.length && _rareWeaponEndurance > 0);
         rareWeaponEndurance[_weaponLevel - 1] = _rareWeaponEndurance;
+    }
+
+    function getRareWeaponEndurance(uint256 _weaponLevel) public view returns (uint256) {
+        require(_weaponLevel != 0 && _weaponLevel < rareWeaponEndurance.length);
+        return rareWeaponEndurance[_weaponLevel - 1];
     }
     
     function updateWeaponAttack(uint256 _weaponLevel, uint256 _weaponAttack) public authorized {
@@ -1709,14 +1724,26 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         commonBaseStat = [_baseEndurance, _baseAttack];
     }
 
+    function getCommonBaseStat() public view returns (uint256[2] memory) {
+        return commonBaseStat;
+    }
+
     function setUpgradeBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
         require(_baseEndurance > 0 && _baseAttack > 0);
         upgradeBaseStat = [_baseEndurance, _baseAttack];
     }
 
+    function getUpgradeBaseStat() public view returns (uint256[2] memory) {
+        return upgradeBaseStat;
+    }
+
     function setRareBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
         require(_baseEndurance > 0 && _baseAttack > 0);
         rareBaseStat = [_baseEndurance, _baseAttack];
+    }
+
+    function getRareBaseStat() public view returns (uint256[2] memory) {
+        return rareBaseStat;
     }
 
     function addWeaponStatus(uint256[] memory _statusID) public authorized {
