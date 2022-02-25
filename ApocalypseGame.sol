@@ -5122,16 +5122,6 @@ contract ApocalypseGame is Pausable, Auth {
         xpGainBase = _xpGainBase;
     }
     
-    function updateMintingPrice(uint256 _mintingPrice) public onlyOwner {
-        require(_mintingPrice > 0);
-        mintingPrice = _mintingPrice.mul(10**rvzToken.decimals());
-    }
-    
-    function updateUpgradePrice(uint256 _upgradePrice) public onlyOwner {
-        require(_upgradePrice > 0);
-        upgradePrice = _upgradePrice.mul(10**apocToken.decimals());
-    }
-    
     function updateEnduranceDeduction(uint256 _enduranceDeduction) public onlyOwner {
         require(_enduranceDeduction > 0);
         enduranceDeduction = _enduranceDeduction;
