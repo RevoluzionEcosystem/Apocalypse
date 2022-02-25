@@ -2216,7 +2216,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
 
     }
 
-    function _mintRareDrop(address _owner) internal {
+    function _mintRareDrop(address _owner) internal returns (uint256) {
         require(rareCurrentSupply < maxCharSupply[0]);
 
         uint256[3] memory mixer = _mixer(_owner, rareCurrentSupply/addDef);
@@ -2246,9 +2246,11 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
 
         emit AirdropCharacter(_owner, tokenID);
 
+        return tokenID;
+
     }
 
-    function _mintCommonDrop(address _owner) internal {
+    function _mintCommonDrop(address _owner) internal returns (uint256) {
         require(commonCurrentSupply < maxCharSupply[1]);
 
         uint256[3] memory mixer = _mixer(_owner, commonCurrentSupply/addDef);
@@ -2278,6 +2280,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         
         emit AirdropCharacter(_owner, tokenID);
 
+        return tokenID;
     }
 
     /* NFT ERC logic functions */
