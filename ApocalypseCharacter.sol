@@ -1523,10 +1523,11 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         upgradeBaseStat = [5, 5];
         rareBaseStat = [10, 10];
 
-        upgradePercentage = [5, 2];
+        upgradePercentage = [1, 2];
         rarePercentage = [5, 4];
 
-        setDefaultInfo(50, 1000, 1500, 1000, 3, 2);
+        maxUpgradeStatus = 2;
+        setDefaultInfo(50, 1000, 1500, 1000, 3);
 
         charStatus = [0,1,2];
         charType = [1,2];
@@ -1657,13 +1658,17 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         rarePercentage = [_rareNumerator, _rarePower];
     }
 
-    function setDefaultInfo(uint256 _maxLevel, uint256 _baseHP, uint256 _upgradeBaseHP, uint256 _baseNextXP, uint256 _addDef, uint256 _maxUpgradeStatus) public authorized {
+    function setDefaultInfo(uint256 _maxLevel, uint256 _baseHP, uint256 _upgradeBaseHP, uint256 _baseNextXP, uint256 _addDef) public authorized {
         require(_maxLevel > 0 && _baseHP > 0 && _upgradeBaseHP > 0 && _baseNextXP > 0 && _addDef > 0);
         maxLevel = _maxLevel;
         baseHP = _baseHP;
         upgradeBaseHP = _upgradeBaseHP;
         baseNextXP = _baseNextXP;
         addDef = _addDef;
+    }
+
+    function setMaxUpgradeStatus(uint256 _maxUpgradeStatus) public authorized {
+        require(_maxUpgradeStatus > 0);
         maxUpgradeStatus = _maxUpgradeStatus;
     }
 
