@@ -2002,10 +2002,11 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         upgradeBaseStat = [5, 5];
         rareBaseStat = [10, 10];
 
-        upgradePercentage = [5, 2];
+        upgradePercentage = [1, 2];
         rarePercentage = [5, 4];
 
-        setDefaultInfo(50, 1000, 1500, 1000, 3, 2);
+        maxUpgradeStatus = 2;
+        setDefaultInfo(50, 1000, 1500, 1000, 3);
 
         charStatus = [0,1,2];
         charType = [1,2];
@@ -2136,13 +2137,17 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         rarePercentage = [_rareNumerator, _rarePower];
     }
 
-    function setDefaultInfo(uint256 _maxLevel, uint256 _baseHP, uint256 _upgradeBaseHP, uint256 _baseNextXP, uint256 _addDef, uint256 _maxUpgradeStatus) public authorized {
+    function setDefaultInfo(uint256 _maxLevel, uint256 _baseHP, uint256 _upgradeBaseHP, uint256 _baseNextXP, uint256 _addDef) public authorized {
         require(_maxLevel > 0 && _baseHP > 0 && _upgradeBaseHP > 0 && _baseNextXP > 0 && _addDef > 0);
         maxLevel = _maxLevel;
         baseHP = _baseHP;
         upgradeBaseHP = _upgradeBaseHP;
         baseNextXP = _baseNextXP;
         addDef = _addDef;
+    }
+
+    function setMaxUpgradeStatus(uint256 _maxUpgradeStatus) public authorized {
+        require(_maxUpgradeStatus > 0);
         maxUpgradeStatus = _maxUpgradeStatus;
     }
 
@@ -3027,15 +3032,30 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         require(_weaponLevel != 0 && _weaponLevel < commonWeaponEndurance.length && _commonWeaponEndurance > 0);
         commonWeaponEndurance[_weaponLevel - 1] = _commonWeaponEndurance;
     }
+
+    function getCommonWeaponEndurance(uint256 _weaponLevel) public view returns (uint256) {
+        require(_weaponLevel != 0 && _weaponLevel < commonWeaponEndurance.length);
+        return commonWeaponEndurance[_weaponLevel - 1];
+    }
     
     function updateUpgradeWeaponEndurance(uint256 _weaponLevel, uint256 _upgradeWeaponEndurance) public authorized {
         require(_weaponLevel != 0 && _weaponLevel < upgradeWeaponEndurance.length && _upgradeWeaponEndurance > 0);
         upgradeWeaponEndurance[_weaponLevel - 1] = _upgradeWeaponEndurance;
     }
+
+    function getUpgradeWeaponEndurance(uint256 _weaponLevel) public view returns (uint256) {
+        require(_weaponLevel != 0 && _weaponLevel < upgradeWeaponEndurance.length);
+        return upgradeWeaponEndurance[_weaponLevel - 1];
+    }
     
     function updateRareWeaponEndurance(uint256 _weaponLevel, uint256 _rareWeaponEndurance) public authorized {
         require(_weaponLevel != 0 && _weaponLevel < rareWeaponEndurance.length && _rareWeaponEndurance > 0);
         rareWeaponEndurance[_weaponLevel - 1] = _rareWeaponEndurance;
+    }
+
+    function getRareWeaponEndurance(uint256 _weaponLevel) public view returns (uint256) {
+        require(_weaponLevel != 0 && _weaponLevel < rareWeaponEndurance.length);
+        return rareWeaponEndurance[_weaponLevel - 1];
     }
     
     function updateWeaponAttack(uint256 _weaponLevel, uint256 _weaponAttack) public authorized {
@@ -3058,14 +3078,26 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         commonBaseStat = [_baseEndurance, _baseAttack];
     }
 
+    function getCommonBaseStat() public view returns (uint256[2] memory) {
+        return commonBaseStat;
+    }
+
     function setUpgradeBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
         require(_baseEndurance > 0 && _baseAttack > 0);
         upgradeBaseStat = [_baseEndurance, _baseAttack];
     }
 
+    function getUpgradeBaseStat() public view returns (uint256[2] memory) {
+        return upgradeBaseStat;
+    }
+
     function setRareBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
         require(_baseEndurance > 0 && _baseAttack > 0);
         rareBaseStat = [_baseEndurance, _baseAttack];
+    }
+
+    function getRareBaseStat() public view returns (uint256[2] memory) {
+        return rareBaseStat;
     }
 
     function addWeaponStatus(uint256[] memory _statusID) public authorized {
@@ -3798,14 +3830,29 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         commonWandEndurance[_wandLevel - 1] = _commonWandEndurance;
     }
     
+    function getCommonWandEndurance(uint256 _wandLevel) public view returns (uint256) {
+        require(_wandLevel != 0 && _wandLevel < commonWandEndurance.length);
+        return commonWandEndurance[_wandLevel - 1];
+    }
+    
     function updateUpgradeWandEndurance(uint256 _wandLevel, uint256 _upgradeWandEndurance) public authorized {
         require(_wandLevel != 0 && _wandLevel < upgradeWandEndurance.length && _upgradeWandEndurance > 0);
         upgradeWandEndurance[_wandLevel - 1] = _upgradeWandEndurance;
     }
     
+    function getUpgradeWandEndurance(uint256 _wandLevel) public view returns (uint256) {
+        require(_wandLevel != 0 && _wandLevel < upgradeWandEndurance.length);
+        return upgradeWandEndurance[_wandLevel - 1];
+    }
+    
     function updateRareWandEndurance(uint256 _wandLevel, uint256 _rareWandEndurance) public authorized {
         require(_wandLevel != 0 && _wandLevel < rareWandEndurance.length && _rareWandEndurance > 0);
         rareWandEndurance[_wandLevel - 1] = _rareWandEndurance;
+    }
+    
+    function getRareWandEndurance(uint256 _wandLevel) public view returns (uint256) {
+        require(_wandLevel != 0 && _wandLevel < rareWandEndurance.length);
+        return rareWandEndurance[_wandLevel - 1];
     }
     
     function updateWandAttack(uint256 _wandLevel, uint256 _wandAttack) public authorized {
@@ -3828,14 +3875,26 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         commonBaseStat = [_baseEndurance, _baseAttack];
     }
 
+    function getCommonBaseStat() public view returns (uint256[2] memory) {
+        return commonBaseStat;
+    }
+
     function setUpgradeBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
         require(_baseEndurance > 0 && _baseAttack > 0);
         upgradeBaseStat = [_baseEndurance, _baseAttack];
     }
 
+    function getUpgradeBaseStat() public view returns (uint256[2] memory) {
+        return upgradeBaseStat;
+    }
+
     function setRareBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
         require(_baseEndurance > 0 && _baseAttack > 0);
         rareBaseStat = [_baseEndurance, _baseAttack];
+    }
+
+    function getRareBaseStat() public view returns (uint256[2] memory) {
+        return rareBaseStat;
     }
 
     function addWandStatus(uint256[] memory _statusID) public authorized {
@@ -4561,14 +4620,29 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         commonShieldEndurance[_shieldLevel - 1] = _commonShieldEndurance;
     }
     
+    function getCommonShieldEndurance(uint256 _shieldLevel) public view returns (uint256) {
+        require(_shieldLevel != 0 && _shieldLevel < commonShieldEndurance.length);
+        return commonShieldEndurance[_shieldLevel - 1];
+    }
+    
     function updateUpgradeShieldEndurance(uint256 _shieldLevel, uint256 _upgradeShieldEndurance) public authorized {
         require(_shieldLevel != 0 && _shieldLevel < upgradeShieldEndurance.length && _upgradeShieldEndurance > 0);
         upgradeShieldEndurance[_shieldLevel - 1] = _upgradeShieldEndurance;
     }
     
+    function getUpgradeShieldEndurance(uint256 _shieldLevel) public view returns (uint256) {
+        require(_shieldLevel != 0 && _shieldLevel < upgradeShieldEndurance.length);
+        return upgradeShieldEndurance[_shieldLevel - 1];
+    }
+    
     function updateRareShieldEndurance(uint256 _shieldLevel, uint256 _rareShieldEndurance) public authorized {
         require(_shieldLevel != 0 && _shieldLevel < rareShieldEndurance.length && _rareShieldEndurance > 0);
         rareShieldEndurance[_shieldLevel - 1] = _rareShieldEndurance;
+    }
+    
+    function getRareShieldEndurance(uint256 _shieldLevel) public view returns (uint256) {
+        require(_shieldLevel != 0 && _shieldLevel < rareShieldEndurance.length);
+        return rareShieldEndurance[_shieldLevel - 1];
     }
     
     function updateShieldDefence(uint256 _shieldLevel, uint256 _shieldDefence) public authorized {
@@ -4591,14 +4665,26 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         commonBaseStat = [_baseEndurance, _baseDefence];
     }
 
+    function getCommonBaseStat() public view returns (uint256[2] memory) {
+        return commonBaseStat;
+    }
+
     function setUpgradeBaseStat(uint256 _baseEndurance, uint256 _baseDefence) public authorized {
         require(_baseEndurance > 0 && _baseDefence > 0);
         upgradeBaseStat = [_baseEndurance, _baseDefence];
     }
 
+    function getUpgradeBaseStat() public view returns (uint256[2] memory) {
+        return upgradeBaseStat;
+    }
+
     function setRareBaseStat(uint256 _baseEndurance, uint256 _baseDefence) public authorized {
         require(_baseEndurance > 0 && _baseDefence > 0);
         rareBaseStat = [_baseEndurance, _baseDefence];
+    }
+
+    function getRareBaseStat() public view returns (uint256[2] memory) {
+        return rareBaseStat;
     }
 
     function addShieldStatus(uint256[] memory _statusID) public authorized {
@@ -5096,26 +5182,18 @@ contract ApocalypseGame is Pausable, Auth {
     using Address for address;
     using Strings for string;
 
-    /** DATA **/
-    IERC20Extended public mintCharacterToken;
-    IERC20Extended public mintWeaponToken;
-    IERC20Extended public mintWandToken;
-    IERC20Extended public mintShieldToken;
-    IERC20Extended public rewardToken;
-    
-    IERC20Extended public charLevelUpToken;
-    IERC20Extended public upgradeWeaponToken;
-    IERC20Extended public upgradeWandToken;
-    IERC20Extended public upgradeShieldToken;
 
-    RewardPoolDistributor public distributor;
-    IUniswapV2Router02 public router;
+    /** DATA **/
 
     ApocalypseRandomizer public randomizer;
     ApocalypseCharacter public apocCharacter;
     ApocalypseWeapon public apocWeapon;
     ApocalypseWand public apocWand;
     ApocalypseShield public apocShield;
+    
+    IERC20Extended public rewardToken;
+    
+    RewardPoolDistributor public distributor;
 
     struct CharacterSlot {
         uint256 tokenID1;
@@ -5133,84 +5211,54 @@ contract ApocalypseGame is Pausable, Auth {
     uint256 public upgradeBaseHP;
     uint256 public baseNextXP;
     uint256 public addDef;
-    uint256 public maxUpgradeStatus;
-    uint256 public enduranceDeduction;
-    uint256 public xpGainBase;
-    uint256 public hpRequireBase;
-    uint256 public hpRecovery;
-    uint256 public durationHPRecover;
 
     uint256 public maxSupplyIncrease;
     uint256 public lastSupplyIncrease;
     uint256 public cooldownSupplyIncrease;
+
+    uint256 public hpRecovery;
+    uint256 public durationHPRecover;
+    uint256 public enduranceDeduction;
     uint256 public dropPercentage;
 
-    uint256 public characterBUSDPrice;
-    uint256 public weaponBUSDPrice;
-    uint256 public wandBUSDPrice;
-    uint256 public shieldBUSDPrice;
-
-    uint256 public weaponUpgradeBUSDPrice;
-    uint256 public wandUpgradeBUSDPrice;
-    uint256 public shieldUpgradeBUSDPrice;
+    uint256 public xpGainBase;
+    uint256 public hpRequireBase;
 
     uint256[] public baseWinningRate;
 
     mapping(address => CharacterSlot) public charSlot;
 
-    
+
     /** CONSTRUCTOR **/
+
     constructor(
-        IERC20Extended _rvzToken,
-        IERC20Extended _apocToken,
         IERC20Extended _rewardToken,
-        IUniswapV2Router02 _router,
         ApocalypseCharacter _apocCharacter,
         ApocalypseWeapon _apocWeapon,
         ApocalypseWand _apocWand,
         ApocalypseShield _apocShield,
         RewardPoolDistributor _distributor
     ) {
-        router = _router;
-
-        mintCharacterToken = _rvzToken;
-        mintWeaponToken = _apocToken;
-        mintWandToken = _apocToken;
-        mintShieldToken = _apocToken;
         rewardToken = _rewardToken;
         
-        charLevelUpToken = _apocToken;
-        upgradeWeaponToken = _apocToken;
-        upgradeWandToken = _apocToken;
-        upgradeShieldToken = _apocToken;
-
         apocCharacter = _apocCharacter;
         apocWeapon = _apocWeapon;
         apocWand = _apocWand;
         apocShield = _apocShield;
         distributor = _distributor;
 
-        weaponUpgradeBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
-        wandUpgradeBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
-        shieldUpgradeBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
-
-        characterBUSDPrice = uint256(100).mul(10**rewardToken.decimals());
-        weaponBUSDPrice = uint256(50).mul(10**rewardToken.decimals());
-        wandBUSDPrice = uint256(50).mul(10**rewardToken.decimals());
-        shieldBUSDPrice = uint256(50).mul(10**rewardToken.decimals());
-        
-        hpRequireBase = 100;
-        xpGainBase = 10;
-        enduranceDeduction = 10;
-        hpRecovery = 1;
-        durationHPRecover = 30;
         maxLevel = 50;
         baseHP = 1000;
         upgradeBaseHP = 1500;
         baseNextXP =1000;
         addDef = 3;
-        maxUpgradeStatus = 2;
-        
+
+        hpRequireBase = 100;
+        xpGainBase = 10;
+        enduranceDeduction = 10;
+        hpRecovery = 1;
+        durationHPRecover = 30;
+
         maxSupplyIncrease = 10;
         lastSupplyIncrease = block.timestamp;
         cooldownSupplyIncrease = 1 days;
@@ -5219,18 +5267,13 @@ contract ApocalypseGame is Pausable, Auth {
         baseWinningRate = [90,89,88,87,86,85,84,83,82,81,80,79,78,77,76,75,74,73,72,71,70,69,68,67,66,65,64,63,62,61,60,55,53,50,46,43,40,38,35,30,25,24,22,20,18,16,14,12,10,5];
     }
 
-    
+
     /** EVENT **/
     event ChangeRewardToken(address caller, address prevRewardToken, address newRewardToken);
-    event ChangeMintCharacterToken(address caller, address prevMintCharacterToken, address newMintCharacterToken);
-    event ChangeMintWeaponToken(address caller, address prevMintWeaponToken, address newMintWeaponToken);
-    event ChangeMintWandToken(address caller, address prevMintWandToken, address newMintWandToken);
-    event ChangeMintShieldToken(address caller, address prevMintShieldToken, address newMintShieldToken);
     event ChangeRandomizer(address caller, address prevRandomizer, address newRandomizer);
     event ChangeRewardPool(address caller, address prevRewardPool, address newRewardPool);
-    event ChangeRouter(address caller, address prevRouter, address newRouter);
 
-    
+
     /** FUNCTION **/  
 
     /* General functions */
@@ -5241,8 +5284,7 @@ contract ApocalypseGame is Pausable, Auth {
 
     function unpause() public whenPaused onlyOwner {
         _unpause();
-    }  
-
+    }
     /* Respective contract functions */
 
     function changeRewardToken(IERC20Extended _rewardToken) public authorized {
@@ -5251,34 +5293,10 @@ contract ApocalypseGame is Pausable, Auth {
         emit ChangeRewardToken(_msgSender(), prevRewardToken, address(rewardToken));
     }
 
-    function changeMintCharacterToken(IERC20Extended _mintCharacterToken) public authorized {
-        address prevMintCharacterToken = address(mintCharacterToken);
-        mintCharacterToken = _mintCharacterToken;
-        emit ChangeMintCharacterToken(_msgSender(), prevMintCharacterToken, address(mintCharacterToken));
-    }
-
-    function changeMintWeaponToken(IERC20Extended _mintWeaponToken) public authorized {
-        address prevMintWeaponToken = address(mintWeaponToken);
-        mintWeaponToken = _mintWeaponToken;
-        emit ChangeMintWeaponToken(_msgSender(), prevMintWeaponToken, address(mintWeaponToken));
-    }
-
-    function changeMintWandToken(IERC20Extended _mintWandToken) public authorized {
-        address prevMintWandToken = address(mintWandToken);
-        mintWandToken = _mintWandToken;
-        emit ChangeMintWandToken(_msgSender(), prevMintWandToken, address(mintWandToken));
-    }
-
-    function changeMintShieldToken(IERC20Extended _mintShieldToken) public authorized {
-        address prevMintShieldToken = address(mintShieldToken);
-        mintShieldToken = _mintShieldToken;
-        emit ChangeMintShieldToken(_msgSender(), prevMintShieldToken, address(mintShieldToken));
-    }
-
     function changeRandomizer(ApocalypseRandomizer _randomizer) public authorized {
         address prevRandomizer = address(randomizer);
         randomizer = _randomizer;
-        emit ChangeRewardToken(_msgSender(), prevRandomizer, address(randomizer));
+        emit ChangeRandomizer(_msgSender(), prevRandomizer, address(randomizer));
     }
 
     function changeRewardPool(RewardPoolDistributor _distributor) public authorized {
@@ -5287,23 +5305,16 @@ contract ApocalypseGame is Pausable, Auth {
         emit ChangeRewardPool(_msgSender(), prevDistributor, address(distributor));
     }
 
-    function changeRouter(IUniswapV2Router02 _router) public authorized {
-        address prevRouter = address(router);
-        router = _router;
-        emit ChangeRouter(_msgSender(), prevRouter, address(router));
-    }
-
     /* Default stats functions */
 
-    function setDefaultInfo(uint256 _maxLevel, uint256 _baseHP, uint256 _upgradeBaseHP, uint256 _baseNextXP, uint256 _addDef, uint256 _maxUpgradeStatus) public onlyOwner {
+    function setDefaultInfo(uint256 _maxLevel, uint256 _baseHP, uint256 _upgradeBaseHP, uint256 _baseNextXP, uint256 _addDef) public onlyOwner {
         require(_maxLevel > 0 && _baseHP > 0 && _upgradeBaseHP > 0 && _baseNextXP > 0 && _addDef > 0);
         maxLevel = _maxLevel;
         baseHP = _baseHP;
         upgradeBaseHP = _upgradeBaseHP;
         baseNextXP =_baseNextXP;
         addDef = _addDef;
-        maxUpgradeStatus = _maxUpgradeStatus;
-        apocCharacter.setDefaultInfo(_maxLevel, _baseHP, _upgradeBaseHP, _baseNextXP, _addDef, _maxUpgradeStatus);
+        apocCharacter.setDefaultInfo(_maxLevel, _baseHP, _upgradeBaseHP, _baseNextXP, _addDef);
     }
     
     function addBaseWinningRate(uint256[] memory _baseWinningRate) public onlyOwner {
@@ -5344,29 +5355,99 @@ contract ApocalypseGame is Pausable, Auth {
         dropPercentage = _dropPercentage;
     }
 
-    function updateUpgradeBUSDPrice(uint256 _weaponUpgradeBUSDPrice, uint256 _wandUpgradeBUSDPrice, uint256 _shieldUpgradeBUSDPrice) public onlyOwner {
-        require(_weaponUpgradeBUSDPrice > 0 && _wandUpgradeBUSDPrice > 0 && _shieldUpgradeBUSDPrice > 0);
-        weaponUpgradeBUSDPrice = uint256(_weaponUpgradeBUSDPrice).mul(10**rewardToken.decimals());
-        wandUpgradeBUSDPrice = uint256(_wandUpgradeBUSDPrice).mul(10**rewardToken.decimals());
-        shieldUpgradeBUSDPrice = uint256(_shieldUpgradeBUSDPrice).mul(10**rewardToken.decimals());
+    /* Check functions */
+
+    function increaseSupply() internal {
+        if (block.timestamp >= lastSupplyIncrease + cooldownSupplyIncrease) {
+            dailySupplyIncrease();
+            lastSupplyIncrease = block.timestamp;
+        }
+    }
+    
+    function dailySupplyIncrease() internal {
+        apocCharacter.addSpecificMaxCharSupply(1, 1, 1, maxSupplyIncrease); // fencing warriors
+        apocCharacter.addSpecificMaxCharSupply(1, 1, 2, maxSupplyIncrease); // axe warriors
+        apocCharacter.addSpecificMaxCharSupply(1, 1, 3, maxSupplyIncrease); // bow warriors
+        apocCharacter.addSpecificMaxCharSupply(1, 1, 4, maxSupplyIncrease); // sword warriors
+        apocCharacter.addSpecificMaxCharSupply(1, 1, 5, maxSupplyIncrease); // hammer warriors                        
+        apocCharacter.addSpecificMaxCharSupply(1, 2, 1, maxSupplyIncrease); // energy mages
+        apocCharacter.addSpecificMaxCharSupply(1, 2, 2, maxSupplyIncrease); // lightning mages
+        apocCharacter.addSpecificMaxCharSupply(1, 2, 3, maxSupplyIncrease); // earth mages
+        apocCharacter.addSpecificMaxCharSupply(1, 2, 4, maxSupplyIncrease); // ice mages
+        apocCharacter.addSpecificMaxCharSupply(1, 2, 5, maxSupplyIncrease); // fire mages
     }
 
-    function updateMintBUSDPrice(uint256 _characterBUSDPrice, uint256 _weaponBUSDPrice, uint256 _wandBUSDPrice, uint256 _shieldBUSDPrice) public onlyOwner {
-        require(_characterBUSDPrice > 0 && _weaponBUSDPrice > 0 && _wandBUSDPrice > 0 && _shieldBUSDPrice > 0);
-        characterBUSDPrice = uint256(_characterBUSDPrice).mul(10**rewardToken.decimals());
-        weaponBUSDPrice = uint256(_weaponBUSDPrice).mul(10**rewardToken.decimals());
-        wandBUSDPrice = uint256(_wandBUSDPrice).mul(10**rewardToken.decimals());
-        shieldBUSDPrice = uint256(_shieldBUSDPrice).mul(10**rewardToken.decimals());
+    function recoverHP(uint256 _slot) internal {
+        if (_slot == 1) {
+            uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate1);
+            uint256 recover = duration.div(durationHPRecover).mul(hpRecovery);
+            apocCharacter.recoverHP(charSlot[_msgSender()].tokenID1, recover);
+        } else if (_slot == 2) {
+            uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate2);
+            uint256 recover = duration.div(durationHPRecover).mul(hpRecovery);
+            apocCharacter.recoverHP(charSlot[_msgSender()].tokenID2, recover);
+        }
+    }
+
+    function getSuccessRate(uint256 _tokenID, uint256 _weaponAttack) public view returns(uint256) {
+        uint256 success = baseWinningRate[apocCharacter.getCharLevel(_tokenID).sub(1)].mul(100);
+        uint256 failure = uint256(100).mul(100).sub(success);
+        uint256 totalAttack = apocCharacter.getBaseAttack(_tokenID).add(apocCharacter.getAngelModifier(_tokenID)).add(_weaponAttack);
+        return success.add(totalAttack.mul(failure).div(200));
+    }
+
+    function getHPRequired(uint256 _tokenID) internal view returns(uint256) {
+        return (apocCharacter.getCharLevel(_tokenID).sub(1)).mul(10).add(hpRequireBase);
+    }
+
+    function getXPGain(uint256 _tokenID) internal view returns(uint256) {
+        return (apocCharacter.getCharLevel(_tokenID).sub(1)).mul(2).add(xpGainBase);
+    }
+
+    function mixer(uint256 _charTokenID) internal view returns (uint256[3] memory) {
+        uint256 userAddress = uint256(uint160(_msgSender()));
+        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
+        uint256 randomN = randomizer.sliceNumber(random, 10, 4, apocCharacter.getCharLevel(_charTokenID));
+        
+        uint256 drop = randomizer.randomNGenerator(userAddress, block.timestamp, randomN);
+        uint256 dropT = randomizer.sliceNumber(drop, 3, 1, dropPercentage);
+        uint256 dropN = randomizer.sliceNumber(drop, 10, 4, dropPercentage);
+
+        return [randomN, dropT, dropN];
+    }
+
+    function checkDrop(uint256 dropN, uint256 dropT) internal returns (uint256){
+        if (dropPercentage >= dropN && dropT == 0) {
+            return apocShield.mobDropRare(_msgSender());
+        } else if (dropPercentage >= dropN && dropT == 1) {
+            return apocWeapon.mobDropRare(_msgSender());
+        } else if (dropPercentage >= dropN && dropT == 2) {
+            return apocWand.mobDropRare(_msgSender());
+        }
+
+        return 0;
+
+    }
+
+    function checkFight(uint256 _charTokenID, uint256 _charWeaponID, uint256 _rand) internal view returns (bool) {
+        if (
+            apocCharacter.getCharType(_charTokenID) == 1 &&
+            getSuccessRate(_charTokenID, apocWeapon.getBaseAttack(_charWeaponID)) >= _rand
+        ) {
+            return true;
+        } else if (
+            apocCharacter.getCharType(_charTokenID) == 2 &&
+            getSuccessRate(_charTokenID, apocWand.getBaseAttack(_charWeaponID)) >= _rand
+        ) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /* Equip functions */
 
-    // Setter
-
     function equipCharSlot1(uint256 _tokenID) external {
-        if(_msgSender() != owner()) {
-            require(_tokenID > 0);
-        }
         require(
             apocCharacter.getCharEquip(_tokenID) != true && 
             apocCharacter.ownerOf(_tokenID) == _msgSender()
@@ -5388,9 +5469,6 @@ contract ApocalypseGame is Pausable, Auth {
     }
 
     function equipWeaponWandSlot1(uint256 _tokenID) external {
-        if(_msgSender() != owner()) {
-            require(_tokenID > 0);
-        }
         if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 1) {
             require(
                 apocWeapon.getWeaponEndurance(_tokenID) > 0 && 
@@ -5427,9 +5505,7 @@ contract ApocalypseGame is Pausable, Auth {
     }
 
     function equipShieldSlot1(uint256 _tokenID) external {
-        if(_msgSender() != owner()) {
-            require(_tokenID > 0 && apocShield.getShieldEndurance(_tokenID) > 0);
-        }
+        require(apocShield.getShieldEndurance(_tokenID) > 0);
         if (apocShield.getShieldStatus(_tokenID) == 0) {
             require(
                 apocShield.getShieldType(_tokenID) == apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) &&
@@ -5457,9 +5533,6 @@ contract ApocalypseGame is Pausable, Auth {
     }
 
     function equipCharSlot2(uint256 _tokenID) external {
-        if(_msgSender() != owner()) {
-            require(_tokenID > 0);
-        }
         require(apocCharacter.getCharEquip(_tokenID) != true && apocCharacter.ownerOf(_tokenID) == _msgSender());
         charSlot[_msgSender()].tokenID2 = _tokenID;
         apocCharacter.updateCharacterEquip(_tokenID, true);
@@ -5478,9 +5551,6 @@ contract ApocalypseGame is Pausable, Auth {
     }
 
     function equipWeaponWandSlot2(uint256 _tokenID) external {
-        if(_msgSender() != owner()) {
-            require(_tokenID > 0);
-        }
         if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 1) {
             require(
                 apocWeapon.getWeaponEndurance(_tokenID) > 0 && 
@@ -5517,9 +5587,7 @@ contract ApocalypseGame is Pausable, Auth {
     }
 
     function equipShieldSlot2(uint256 _tokenID) external {
-        if(_msgSender() != owner()) {
-            require(_tokenID > 0 && apocShield.getShieldEndurance(_tokenID) > 0);
-        }
+        require(apocShield.getShieldEndurance(_tokenID) > 0);
         if (apocShield.getShieldStatus(_tokenID) == 0) {
             require(
                 apocShield.getShieldType(_tokenID) == apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) &&
@@ -5546,103 +5614,7 @@ contract ApocalypseGame is Pausable, Auth {
         charSlot[_msgSender()].shieldID2 = 0;
     }
 
-    // Getter
-
-    function getTokenIDSlot1(address _owner) public view returns (uint256) {
-        return charSlot[_owner].tokenID1;
-    }
-
-    function getTokenIDSlot2(address _owner) public view returns (uint256) {
-        return charSlot[_owner].tokenID2;
-    }
-
-    function getLastHPUpdate1(address _owner) public view returns (uint256) {
-        return charSlot[_owner].lastHPUpdate1;
-    }
-
-    function getLastHPUpdate2(address _owner) public view returns (uint256) {
-        return charSlot[_owner].lastHPUpdate2;
-    }
-
-    function getWeaponID1(address _owner) public view returns (uint256) {
-        return charSlot[_owner].weaponID1;
-    }
-
-    function getWeaponID2(address _owner) public view returns (uint256) {
-        return charSlot[_owner].weaponID2;
-    }
-
-    function getShieldID1(address _owner) public view returns (uint256) {
-        return charSlot[_owner].shieldID1;
-    }
-
-    function getShieldID2(address _owner) public view returns (uint256) {
-        return charSlot[_owner].shieldID2;
-    }
-    
-    /* Check functions */
-
-    function getSuccessRate(uint256 _tokenID, uint256 _weaponAttack) public view returns(uint256) {
-        uint256 success = baseWinningRate[apocCharacter.getCharLevel(_tokenID).sub(1)].mul(100);
-        uint256 failure = uint256(100).mul(100).sub(success);
-        uint256 totalAttack = apocCharacter.getBaseAttack(_tokenID).add(apocCharacter.getAngelModifier(_tokenID)).add(_weaponAttack);
-        return success.add(totalAttack.mul(failure).div(200));
-    }
-
-    function getHPRequired(uint256 _tokenID) internal view returns(uint256) {
-        return (apocCharacter.getCharLevel(_tokenID).sub(1)).mul(10).add(hpRequireBase);
-    }
-
-    function getXPGain(uint256 _tokenID) internal view returns(uint256) {
-        return (apocCharacter.getCharLevel(_tokenID).sub(1)).mul(2).add(xpGainBase);
-    }
-
-    function checkDrop(uint256 dropN, uint256 dropT) internal returns (uint256){
-        if (dropPercentage >= dropN && dropT == 0) {
-            return apocShield.mobDropRare(_msgSender());
-        } else if (dropPercentage >= dropN && dropT == 1) {
-            return apocWeapon.mobDropRare(_msgSender());
-        } else if (dropPercentage >= dropN && dropT == 2) {
-            return apocWand.mobDropRare(_msgSender());
-        }
-
-        return 0;
-
-    }
-
-    function increaseSupply() internal {
-        if (block.timestamp >= lastSupplyIncrease + cooldownSupplyIncrease) {
-            dailySupplyIncrease();
-            lastSupplyIncrease = block.timestamp;
-        }
-    }
-
-    function dailySupplyIncrease() internal {
-        apocCharacter.addSpecificMaxCharSupply(1, 1, 1, maxSupplyIncrease); // fencing warriors
-        apocCharacter.addSpecificMaxCharSupply(1, 1, 2, maxSupplyIncrease); // axe warriors
-        apocCharacter.addSpecificMaxCharSupply(1, 1, 3, maxSupplyIncrease); // bow warriors
-        apocCharacter.addSpecificMaxCharSupply(1, 1, 4, maxSupplyIncrease); // sword warriors
-        apocCharacter.addSpecificMaxCharSupply(1, 1, 5, maxSupplyIncrease); // hammer warriors                        
-        apocCharacter.addSpecificMaxCharSupply(1, 2, 1, maxSupplyIncrease); // energy mages
-        apocCharacter.addSpecificMaxCharSupply(1, 2, 2, maxSupplyIncrease); // lightning mages
-        apocCharacter.addSpecificMaxCharSupply(1, 2, 3, maxSupplyIncrease); // earth mages
-        apocCharacter.addSpecificMaxCharSupply(1, 2, 4, maxSupplyIncrease); // ice mages
-        apocCharacter.addSpecificMaxCharSupply(1, 2, 5, maxSupplyIncrease); // fire mages
-    }
-
     /* Fight functions */
-
-    function recoverHP(uint256 _slot) internal {
-        if (_slot == 1) {
-            uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate1);
-            uint256 recover = duration.div(durationHPRecover).mul(hpRecovery);
-            apocCharacter.recoverHP(charSlot[_msgSender()].tokenID1, recover);
-        } else if (_slot == 2) {
-            uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate2);
-            uint256 recover = duration.div(durationHPRecover).mul(hpRecovery);
-            apocCharacter.recoverHP(charSlot[_msgSender()].tokenID2, recover);
-        }
-    }
 
     function updateCharacter(bool fightStatus, uint256 tokenId, uint256 shieldID) internal {
         if (fightStatus == true) {
@@ -5691,21 +5663,7 @@ contract ApocalypseGame is Pausable, Auth {
 
         uint256 drop = checkDrop(rand[2], rand[1]);
 
-        bool fightStatus;
-        
-        if (
-            apocCharacter.getCharType(_charTokenID) == 1 &&
-            getSuccessRate(_charTokenID, apocWeapon.getBaseAttack(_charWeaponID)) >= rand[0]
-        ) {
-            fightStatus = true;
-        } else if (
-            apocCharacter.getCharType(_charTokenID) == 2 &&
-            getSuccessRate(_charTokenID, apocWand.getBaseAttack(_charWeaponID)) >= rand[0]
-        ) {
-            fightStatus = true;
-        } else {
-            fightStatus = false;
-        }
+        bool fightStatus = checkFight(_charTokenID, _charWeaponID, rand[0]);
 
         updateCharacter(fightStatus, charSlot[_msgSender()].tokenID1, _charShieldID);
 
@@ -5750,21 +5708,7 @@ contract ApocalypseGame is Pausable, Auth {
 
         uint256 drop = checkDrop(rand[2], rand[1]);
 
-        bool fightStatus;
-        
-        if (
-            apocCharacter.getCharType(_charTokenID) == 1 &&
-            getSuccessRate(_charTokenID, apocWeapon.getBaseAttack(_charWeaponID)) >= rand[0]
-        ) {
-            fightStatus = true;
-        } else if (
-            apocCharacter.getCharType(_charTokenID) == 2 &&
-            getSuccessRate(_charTokenID, apocWand.getBaseAttack(_charWeaponID)) >= rand[0]
-        ) {
-            fightStatus = true;
-        } else {
-            fightStatus = false;
-        }
+        bool fightStatus = checkFight(_charTokenID, _charWeaponID, rand[0]);
 
         updateCharacter(fightStatus, charSlot[_msgSender()].tokenID2, _charShieldID);
 
@@ -5774,109 +5718,390 @@ contract ApocalypseGame is Pausable, Auth {
 
     }
 
-    /* Random mixer functions */
+}
 
-    function mixer(uint256 _charTokenID) internal view returns (uint256[3] memory) {
-        uint256 userAddress = uint256(uint160(_msgSender()));
-        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
-        uint256 randomN = randomizer.sliceNumber(random, 10, 4, apocCharacter.getCharLevel(_charTokenID));
+contract ApocalypseMediator is Pausable, Auth {
+
+
+    /** LIBRARY **/
+    using SafeMath for uint256;
+    using Address for address;
+    using Strings for string;
+
+
+    /** DATA **/
+
+    IUniswapV2Router02 public router;
+
+    ApocalypseCharacter public apocCharacter;
+    ApocalypseWeapon public apocWeapon;
+    ApocalypseWand public apocWand;
+    ApocalypseShield public apocShield;
+
+    IERC20Extended public mintCharacterToken;
+    IERC20Extended public mintWeaponToken;
+    IERC20Extended public mintWandToken;
+    IERC20Extended public mintShieldToken;
+    IERC20Extended public rewardToken;
+
+    IERC20Extended public upgradeCharacterToken;
+    IERC20Extended public levelUpCharacterToken;
+    IERC20Extended public levelUpWeaponToken;
+    IERC20Extended public levelUpWandToken;
+    IERC20Extended public levelUpShieldToken;
+
+    IERC20Extended public repairWeaponToken;
+    IERC20Extended public repairWandToken;
+    IERC20Extended public repairShieldToken;
+
+    uint256 public characterBUSDPrice;
+    uint256 public weaponBUSDPrice;
+    uint256 public wandBUSDPrice;
+    uint256 public shieldBUSDPrice;
+
+    uint256 public characterUpgradeBUSDPrice;
+
+    uint256 public weaponLevelUpBUSDPrice;
+    uint256 public wandLevelUpBUSDPrice;
+    uint256 public shieldLevelUpBUSDPrice;
+
+    uint256 public weaponRepairBUSDPrice;
+    uint256 public wandRepairBUSDPrice;
+    uint256 public shieldRepairBUSDPrice;
+
+    uint256 public maxUpgradeStatus;
+
+    uint256 public xpGainBase;
+
+
+    /** CONSTRUCTOR **/
+    constructor(
+        IERC20Extended _rvzToken,
+        IERC20Extended _apocToken,
+        IERC20Extended _rewardToken,
+        IUniswapV2Router02 _router,
+        ApocalypseCharacter _apocCharacter,
+        ApocalypseWeapon _apocWeapon,
+        ApocalypseWand _apocWand,
+        ApocalypseShield _apocShield
+    ) {
+        router = _router;
+
+        mintCharacterToken = _rvzToken;
+        mintWeaponToken = _apocToken;
+        mintWandToken = _apocToken;
+        mintShieldToken = _apocToken;
+        rewardToken = _rewardToken;
         
-        uint256 drop = randomizer.randomNGenerator(userAddress, block.timestamp, randomN);
-        uint256 dropT = randomizer.sliceNumber(drop, 3, 1, dropPercentage);
-        uint256 dropN = randomizer.sliceNumber(drop, 10, 4, dropPercentage);
+        upgradeCharacterToken = _apocToken;
+        levelUpCharacterToken = _apocToken;
+        levelUpWeaponToken = _apocToken;
+        levelUpWandToken = _apocToken;
+        levelUpShieldToken = _apocToken;
 
-        return [randomN, dropT, dropN];
+        repairWeaponToken = _apocToken;
+        repairWandToken = _apocToken;
+        repairShieldToken = _apocToken;
+
+        apocCharacter = _apocCharacter;
+        apocWeapon = _apocWeapon;
+        apocWand = _apocWand;
+        apocShield = _apocShield;
+
+        maxUpgradeStatus = 2;
+        xpGainBase = 10;
+
+        characterUpgradeBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
+        weaponLevelUpBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
+        wandLevelUpBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
+        shieldLevelUpBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
+        
+        weaponRepairBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
+        wandRepairBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
+        shieldRepairBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
+
+        characterBUSDPrice = uint256(100).mul(10**rewardToken.decimals());
+        weaponBUSDPrice = uint256(50).mul(10**rewardToken.decimals());
+        wandBUSDPrice = uint256(50).mul(10**rewardToken.decimals());
+        shieldBUSDPrice = uint256(50).mul(10**rewardToken.decimals());
+        
     }
 
-    function levelUp(uint256 _tokenID) external {
+
+    /** EVENT **/
+    event ChangeRewardToken(address caller, address prevRewardToken, address newRewardToken);
+    event ChangeMintCharacterToken(address caller, address prevMintCharacterToken, address newMintCharacterToken);
+    event ChangeMintWeaponToken(address caller, address prevMintWeaponToken, address newMintWeaponToken);
+    event ChangeMintWandToken(address caller, address prevMintWandToken, address newMintWandToken);
+    event ChangeMintShieldToken(address caller, address prevMintShieldToken, address newMintShieldToken);
+    event ChangeRouter(address caller, address prevRouter, address newRouter);
+    
+
+    /** FUNCTION **/
+
+    /* General functions */
+
+    function pause() public whenNotPaused authorized {
+        _pause();
+    }
+
+    function unpause() public whenPaused onlyOwner {
+        _unpause();
+    }
+
+    /* Respective contract functions */
+
+    function changeRewardToken(IERC20Extended _rewardToken) public authorized {
+        address prevRewardToken = address(rewardToken);
+        rewardToken = _rewardToken;
+        emit ChangeRewardToken(_msgSender(), prevRewardToken, address(rewardToken));
+    }
+
+    function changeMintCharacterToken(IERC20Extended _mintCharacterToken) public authorized {
+        address prevMintCharacterToken = address(mintCharacterToken);
+        mintCharacterToken = _mintCharacterToken;
+        emit ChangeMintCharacterToken(_msgSender(), prevMintCharacterToken, address(mintCharacterToken));
+    }
+
+    function changeMintWeaponToken(IERC20Extended _mintWeaponToken) public authorized {
+        address prevMintWeaponToken = address(mintWeaponToken);
+        mintWeaponToken = _mintWeaponToken;
+        emit ChangeMintWeaponToken(_msgSender(), prevMintWeaponToken, address(mintWeaponToken));
+    }
+
+    function changeMintWandToken(IERC20Extended _mintWandToken) public authorized {
+        address prevMintWandToken = address(mintWandToken);
+        mintWandToken = _mintWandToken;
+        emit ChangeMintWandToken(_msgSender(), prevMintWandToken, address(mintWandToken));
+    }
+
+    function changeMintShieldToken(IERC20Extended _mintShieldToken) public authorized {
+        address prevMintShieldToken = address(mintShieldToken);
+        mintShieldToken = _mintShieldToken;
+        emit ChangeMintShieldToken(_msgSender(), prevMintShieldToken, address(mintShieldToken));
+    }
+
+    function changeRouter(IUniswapV2Router02 _router) public authorized {
+        address prevRouter = address(router);
+        router = _router;
+        emit ChangeRouter(_msgSender(), prevRouter, address(router));
+    }
+
+    /* Default stats functions */
+
+    function setMaxUpgradeStatus(uint256 _maxUpgradeStatus) public onlyOwner {
+        require(_maxUpgradeStatus > 0);
+        maxUpgradeStatus = _maxUpgradeStatus;
+        apocCharacter.setMaxUpgradeStatus(_maxUpgradeStatus);
+    }
+    
+    function updateXPGainBase(uint256 _xpGainBase) public onlyOwner {
+        require(_xpGainBase > 0);
+        xpGainBase = _xpGainBase;
+    }
+
+    function updateUpgradeBUSDPrice(uint256 _characterUpgradeBUSDPrice, uint256 _weaponLevelUpBUSDPrice, uint256 _wandLevelUpBUSDPrice, uint256 _shieldLevelUpBUSDPrice) public onlyOwner {
+        require(_characterUpgradeBUSDPrice > 0 && _weaponLevelUpBUSDPrice > 0 && _wandLevelUpBUSDPrice > 0 && _shieldLevelUpBUSDPrice > 0);
+        characterUpgradeBUSDPrice = uint256(_characterUpgradeBUSDPrice).mul(10**rewardToken.decimals());
+        weaponLevelUpBUSDPrice = uint256(_weaponLevelUpBUSDPrice).mul(10**rewardToken.decimals());
+        wandLevelUpBUSDPrice = uint256(_wandLevelUpBUSDPrice).mul(10**rewardToken.decimals());
+        shieldLevelUpBUSDPrice = uint256(_shieldLevelUpBUSDPrice).mul(10**rewardToken.decimals());
+    }
+
+    function updateRepairBUSDPrice(uint256 _weaponRepairBUSDPrice, uint256 _wandRepairBUSDPrice, uint256 _shieldRepairBUSDPrice) public onlyOwner {
+        require(_weaponRepairBUSDPrice > 0 && _wandRepairBUSDPrice > 0 && _shieldRepairBUSDPrice > 0);
+        weaponRepairBUSDPrice = uint256(_weaponRepairBUSDPrice).mul(10**rewardToken.decimals());
+        wandRepairBUSDPrice = uint256(_wandRepairBUSDPrice).mul(10**rewardToken.decimals());
+        shieldRepairBUSDPrice = uint256(_shieldRepairBUSDPrice).mul(10**rewardToken.decimals());
+    }
+
+    function updateMintBUSDPrice(uint256 _characterBUSDPrice, uint256 _weaponBUSDPrice, uint256 _wandBUSDPrice, uint256 _shieldBUSDPrice) public onlyOwner {
+        require(_characterBUSDPrice > 0 && _weaponBUSDPrice > 0 && _wandBUSDPrice > 0 && _shieldBUSDPrice > 0);
+        characterBUSDPrice = uint256(_characterBUSDPrice).mul(10**rewardToken.decimals());
+        weaponBUSDPrice = uint256(_weaponBUSDPrice).mul(10**rewardToken.decimals());
+        wandBUSDPrice = uint256(_wandBUSDPrice).mul(10**rewardToken.decimals());
+        shieldBUSDPrice = uint256(_shieldBUSDPrice).mul(10**rewardToken.decimals());
+    }
+
+    /* Check functions */
+
+    function checkPrice(uint256 _priceBUSD, IERC20Extended _token) internal view returns (uint256){
+        uint256 exact = _priceBUSD.div(10**rewardToken.decimals());
+        address[] memory path = new address[](3);
+        path[0] = address(rewardToken);
+        path[1] = router.WETH();
+        path[2] = address(_token);
+        return router.getAmountsOut(_priceBUSD, path)[2].div(exact);
+    }
+
+    function getXPGain(uint256 _tokenID) internal view returns(uint256) {
+        return (apocCharacter.getCharLevel(_tokenID).sub(1)).mul(2).add(xpGainBase);
+    }
+
+    /* Pay and level up or upgrades functions */
+
+    function upgradeCharacter(uint256 _tokenID1, uint256 _tokenID2) external returns (bool, uint256) {
+        require(_msgSender() == apocCharacter.ownerOf(_tokenID1) && _msgSender() == apocCharacter.ownerOf(_tokenID2));
+        require(
+            apocCharacter.getCharSkill(_tokenID1) == apocCharacter.getCharSkill(_tokenID2) &&
+            apocCharacter.getCharType(_tokenID1) == apocCharacter.getCharType(_tokenID2) &&
+            apocCharacter.getCharStatus(_tokenID1) == apocCharacter.getCharStatus(_tokenID2)
+        );
+
+        uint256 _nextStatus = apocCharacter.getCharStatus(_tokenID1).add(1);
+        require (_nextStatus <= maxUpgradeStatus);
+
+        uint256 amount = checkPrice(characterUpgradeBUSDPrice, upgradeCharacterToken);
+        upgradeCharacterToken.transfer(address(upgradeCharacterToken), amount);
+
+        return apocCharacter.upgradeCharacter(_msgSender(), _tokenID1, _tokenID2, _nextStatus);
+    }
+
+    function levelUpCharacter(uint256 _tokenID) external {
         require(_msgSender() == apocCharacter.ownerOf(_tokenID));
-        //getXPGain(_tokenId);
-        //charLevelUpToken.transfer(address(charLevelUpToken), busd);
+        uint256 rounds = uint256(1000).div(getXPGain(_tokenID));
+        if (rounds.mul(getXPGain(_tokenID)) < 1000) {
+            rounds += 1;
+        }
+        uint256 gain = rounds.mul(apocCharacter.getCharLevel(_tokenID));
+        uint256 fee = gain.div(5);
+        
+        uint256 amount = checkPrice(fee, upgradeCharacterToken);
+        upgradeCharacterToken.transfer(address(upgradeCharacterToken), amount);
+
         apocCharacter.levelUp(_tokenID);
     }
 
-    /* Pay and upgrades functions */
-
-    function upgradeWeapon(uint256 _tokenID) external {
+    function levelUpWeapon(uint256 _tokenID) external {
         require(_msgSender() == apocWeapon.ownerOf(_tokenID));
-        uint256 exact = weaponUpgradeBUSDPrice.div(10**rewardToken.decimals());
-        address[] memory path = new address[](3);
-        path[0] = address(rewardToken);
-        path[1] = router.WETH();
-        path[2] = address(upgradeWeaponToken);
-        uint256 amount = router.getAmountsOut(weaponUpgradeBUSDPrice, path)[2].div(exact);
-        upgradeWeaponToken.transfer(address(upgradeWeaponToken), amount);
+        uint256 amount = checkPrice(weaponLevelUpBUSDPrice, levelUpWeaponToken);
+        levelUpWeaponToken.transfer(address(levelUpWeaponToken), amount);
         apocWeapon.levelUp(_tokenID);
     }
 
-    function upgradeWand(uint256 _tokenID) external {
+    function levelUpWand(uint256 _tokenID) external {
         require(_msgSender() == apocWand.ownerOf(_tokenID));
-        uint256 exact = wandUpgradeBUSDPrice.div(10**rewardToken.decimals());
-        address[] memory path = new address[](3);
-        path[0] = address(rewardToken);
-        path[1] = router.WETH();
-        path[2] = address(upgradeWandToken);
-        uint256 amount = router.getAmountsOut(wandUpgradeBUSDPrice, path)[2].div(exact);
-        upgradeWandToken.transfer(address(upgradeWandToken), amount);
+        uint256 amount = checkPrice(wandLevelUpBUSDPrice, levelUpWandToken);
+        levelUpWandToken.transfer(address(levelUpWandToken), amount);
         apocWand.levelUp(_tokenID);
     }
 
-    function upgradeShield(uint256 _tokenID) external {
+    function levelUpShield(uint256 _tokenID) external {
         require(_msgSender() == apocShield.ownerOf(_tokenID));
-        uint256 exact = shieldUpgradeBUSDPrice.div(10**rewardToken.decimals());
-        address[] memory path = new address[](3);
-        path[0] = address(rewardToken);
-        path[1] = router.WETH();
-        path[2] = address(upgradeShieldToken);
-        uint256 amount = router.getAmountsOut(shieldUpgradeBUSDPrice, path)[2].div(exact);
-        upgradeShieldToken.transfer(address(upgradeShieldToken), amount);
+        uint256 amount = checkPrice(shieldLevelUpBUSDPrice, levelUpShieldToken);
+        levelUpShieldToken.transfer(address(levelUpShieldToken), amount);
         apocShield.levelUp(_tokenID);
     }
 
     /* Pay and mint NFT functions */
 
-    function mintCharacter() external {
-        uint256 exact = characterBUSDPrice.div(10**rewardToken.decimals());
-        address[] memory path = new address[](3);
-        path[0] = address(rewardToken);
-        path[1] = router.WETH();
-        path[2] = address(mintCharacterToken);
-        uint256 amount = router.getAmountsOut(characterBUSDPrice, path)[2].div(exact);
+    function mintCharacter() external returns (uint256) {
+        uint256 amount = checkPrice(characterBUSDPrice, mintCharacterToken);
         mintCharacterToken.transfer(address(mintCharacterToken), amount);
-        apocCharacter.mintNewCharacter(_msgSender());
+        return apocCharacter.mintNewCharacter(_msgSender());
     }
 
-    function mintWand() external {
-        uint256 exact = wandBUSDPrice.div(10**rewardToken.decimals());
-        address[] memory path = new address[](3);
-        path[0] = address(rewardToken);
-        path[1] = router.WETH();
-        path[2] = address(mintWandToken);
-        uint256 amount = router.getAmountsOut(wandBUSDPrice, path)[2].div(exact);
+    function mintWand() external returns (uint256) {
+        uint256 amount = checkPrice(wandBUSDPrice, mintWandToken);
         mintWandToken.transfer(address(mintWandToken), amount);
-        apocWand.mintNewWand(_msgSender());
+        return apocWand.mintNewWand(_msgSender());
     }
 
-    function mintWeapon() external {
-        uint256 exact = weaponBUSDPrice.div(10**rewardToken.decimals());
-        address[] memory path = new address[](3);
-        path[0] = address(rewardToken);
-        path[1] = router.WETH();
-        path[2] = address(mintWeaponToken);
-        uint256 amount = router.getAmountsOut(weaponBUSDPrice, path)[2].div(exact);
+    function mintWeapon() external returns (uint256) {
+        uint256 amount = checkPrice(weaponBUSDPrice, mintWeaponToken);
         mintWeaponToken.transfer(address(mintWeaponToken), amount);
-        apocWeapon.mintNewWeapon(_msgSender());
+        return apocWeapon.mintNewWeapon(_msgSender());
     }
 
-    function mintShield() external {
-        uint256 exact = shieldBUSDPrice.div(10**rewardToken.decimals());
-        address[] memory path = new address[](3);
-        path[0] = address(rewardToken);
-        path[1] = router.WETH();
-        path[2] = address(mintShieldToken);
-        uint256 amount = router.getAmountsOut(shieldBUSDPrice, path)[2].div(exact);
+    function mintShield() external returns (uint256) {
+        uint256 amount = checkPrice(shieldBUSDPrice, mintShieldToken);
         mintShieldToken.transfer(address(mintShieldToken), amount);
-        apocShield.mintNewShield(_msgSender());
-    } 
+        return apocShield.mintNewShield(_msgSender());
+    }
 
+    /* Pay and mint NFT functions */
+
+    function repairWeapon(uint256 _tokenID) external {
+        require(_msgSender() == apocWeapon.ownerOf(_tokenID));
+        uint256 amount = checkPrice(weaponRepairBUSDPrice, repairWeaponToken);
+        repairWeaponToken.transfer(address(repairWeaponToken), amount);
+
+        uint256 status = apocWeapon.getWeaponStatus(_tokenID);
+        uint256 level = apocWeapon.getWeaponLevel(_tokenID);
+        
+        uint256 _recoverEndurance;
+
+        if (status == 0 && level > 0) {
+            _recoverEndurance = apocWeapon.getRareWeaponEndurance(level);
+        } else if (status == 0 && level == 0) {
+            _recoverEndurance = apocWeapon.getRareBaseStat()[0];
+        } else if (status == 1 && level > 0) {
+            _recoverEndurance = apocWeapon.getCommonWeaponEndurance(level);
+        } else if (status == 1 && level == 0) {
+            _recoverEndurance = apocWeapon.getCommonBaseStat()[0];
+        } else if (status > 1 && level > 0) {
+            _recoverEndurance = apocWeapon.getUpgradeWeaponEndurance(level);
+        } else if (status > 1 && level == 0) {
+            _recoverEndurance = apocWeapon.getUpgradeBaseStat()[0];
+        }
+
+        apocWeapon.recoverEndurance(_tokenID, _recoverEndurance);
+    }
+
+    function repairWand(uint256 _tokenID) external {
+        require(_msgSender() == apocWand.ownerOf(_tokenID));
+        uint256 amount = checkPrice(wandRepairBUSDPrice, repairWandToken);
+        repairWandToken.transfer(address(repairWandToken), amount);
+        
+        uint256 status = apocWand.getWandStatus(_tokenID);
+        uint256 level = apocWand.getWandLevel(_tokenID);
+        
+        uint256 _recoverEndurance;
+
+        if (status == 0 && level > 0) {
+            _recoverEndurance = apocWand.getRareWandEndurance(level);
+        } else if (status == 0 && level == 0) {
+            _recoverEndurance = apocWand.getRareBaseStat()[0];
+        } else if (status == 1 && level > 0) {
+            _recoverEndurance = apocWand.getCommonWandEndurance(level);
+        } else if (status == 1 && level == 0) {
+            _recoverEndurance = apocWand.getCommonBaseStat()[0];
+        } else if (status > 1 && level > 0) {
+            _recoverEndurance = apocWand.getUpgradeWandEndurance(level);
+        } else if (status > 1 && level == 0) {
+            _recoverEndurance = apocWand.getUpgradeBaseStat()[0];
+        }
+
+        apocWand.recoverEndurance(_tokenID, _recoverEndurance);
+    }
+
+    function repairShield(uint256 _tokenID) external {
+        require(_msgSender() == apocShield.ownerOf(_tokenID));
+        uint256 amount = checkPrice(shieldRepairBUSDPrice, repairShieldToken);
+        repairShieldToken.transfer(address(repairShieldToken), amount);
+        
+        uint256 status = apocShield.getShieldStatus(_tokenID);
+        uint256 level = apocShield.getShieldLevel(_tokenID);
+        
+        uint256 _recoverEndurance;
+
+        if (status == 0 && level > 0) {
+            _recoverEndurance = apocShield.getRareShieldEndurance(level);
+        } else if (status == 0 && level == 0) {
+            _recoverEndurance = apocShield.getRareBaseStat()[0];
+        } else if (status == 1 && level > 0) {
+            _recoverEndurance = apocShield.getCommonShieldEndurance(level);
+        } else if (status == 1 && level == 0) {
+            _recoverEndurance = apocShield.getCommonBaseStat()[0];
+        } else if (status > 1 && level > 0) {
+            _recoverEndurance = apocShield.getUpgradeShieldEndurance(level);
+        } else if (status > 1 && level == 0) {
+            _recoverEndurance = apocShield.getUpgradeBaseStat()[0];
+        }
+
+        apocShield.recoverEndurance(_tokenID, _recoverEndurance);
+    }
+
+    
+    
 }
