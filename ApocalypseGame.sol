@@ -1703,7 +1703,6 @@ abstract contract ERC721Burnable is Context, ERC721 {
 }
 
 
-
 /** REWARD POOL DISTRIBUTOR **/
 
 interface IRewardPoolDistributor {
@@ -2062,13 +2061,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
 
     /** FUNCTION **/
 
-    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
-        randomizer = _randomizer;
-    }
-
-    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
-        return randomizer;
-    }
+    /* General functions */
 
     function pause() public whenNotPaused authorized {
         _pause();
@@ -2094,6 +2087,18 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         return URI;
     }
 
+    /* Randomizer functions */
+
+    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
+        randomizer = _randomizer;
+    }
+
+    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
+        return randomizer;
+    }
+
+    /* Supply functions */
+
     function addSpecificMaxCharSupply(
         uint256 _charStatus,
         uint256 _charType,
@@ -2118,6 +2123,8 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
 
         emit AddCharacterSupply(_maxCharSupply);
     }
+
+    /* Default stats functions */
 
     function setUpgradePercentage(uint256 _upgradeNumerator, uint256 _upgradePower) public authorized {
         require(_upgradeNumerator > 0 && _upgradePower > 0);
@@ -2172,6 +2179,10 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         }
     }
 
+    /* Character attributes functions */
+
+    // Setter
+
     function updateCharacterEquip(uint256 _tokenID, bool _equip) external whenNotPaused authorized {
         require(apocChar[_tokenID].charEquip != _equip);
         apocChar[_tokenID].charEquip = _equip;
@@ -2225,9 +2236,10 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         }
     }
 
-    function updateNextXP(uint256 _tokenID, uint256 _charLevel) external whenNotPaused authorized {
+    function updateNextXP(uint256 _tokenID) external whenNotPaused authorized {
         require(getCharXP(_tokenID) == getCharNextXP(_tokenID));
-        apocChar[_tokenID].charNextXP = baseNextXP * _charLevel;
+        uint256 nextLevel = getCharLevel(_tokenID) + 1;
+        apocChar[_tokenID].charNextXP = baseNextXP * nextLevel;
     }
 
     function increaseAngelModifier(uint256 _tokenID, uint256 _angelModifier) external whenNotPaused authorized {
@@ -2247,6 +2259,8 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
             apocChar[_tokenID].angelModifier -= _angelModifier;
         }
     }
+
+    // Getter
 
     function getCharIndex(uint256 _tokenID) public view returns(uint256[3] memory) {
         return apocChar[_tokenID].charIndex;
@@ -2311,6 +2325,58 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
 
         return imgURI;
     }
+
+    /* NFT general logic functions */
+
+    function _mixer(address _owner, uint256 _offset) internal view returns (uint256[3] memory){
+        uint256 userAddress = uint256(uint160(_owner));
+        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
+
+        uint256 _charType = randomizer.sliceNumber(random, charType.length, 1, charType.length);
+        uint256 _charSkill = randomizer.sliceNumber(random, charSkill.length, 1, charSkill.length);
+        uint256 _addDef = randomizer.sliceNumber(random, addDef, 1, _offset);
+
+        return [_charType, _charSkill, _addDef];
+    }
+
+    function _createCharacter(
+        uint256[3] memory _currentSupplyInfo,
+        uint256 _charStatus,
+        uint256 _charType,
+        uint256 _charSkill,
+        uint256 _charLevel,
+        uint256 _baseHP,
+        uint256 _baseXP,
+        uint256 _baseAttack,
+        uint256 _baseDefence        
+    ) internal {
+        Character memory _apocChar = Character({
+            charIndex: _currentSupplyInfo,
+            charEquip: false,
+            charStatus: _charStatus,
+            charType: _charType,
+            charSkill: _charSkill,
+            charLevel: _charLevel,
+            charHP: _baseHP,
+            charXP: 0,
+            charNextXP: _baseXP,
+            baseAttack: _baseAttack,
+            baseDefence: _baseDefence,
+            angelModifier: 0
+        });
+        
+        apocChar.push(_apocChar);
+    }
+
+    function _safeMint(address to) internal {
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(to, tokenId);
+
+        emit MintNewCharacter(to, tokenId);
+    }
+
+    /* NFT upgrade logic functions */
 
     function _burnUpgrade(uint256 _tokenID) internal {
         _burn(_tokenID);
@@ -2387,14 +2453,16 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
 
     }
 
-    function mintNewCharacter() external whenNotPaused authorized returns (uint256){
+    /* NFT mint logic functions */
+
+    function mintNewCharacter(address _owner) public whenNotPaused authorized returns (uint256){
 
         require(totalSupply() < totalMaxSupply);
 
         if (commonCurrentSupply == maxCharSupply[1] && rareCurrentSupply < maxCharSupply[0]) {
-            return _mintRare(_msgSender());
+            return _mintRare(_owner);
         } else if (commonCurrentSupply < maxCharSupply[1] && rareCurrentSupply < maxCharSupply[0]) {
-            uint256 userAddress = uint256(uint160(_msgSender()));
+            uint256 userAddress = uint256(uint160(_owner));
             uint256 charMixer = charStatus.length + charType.length + charSkill.length;
             uint256 targetBlock = block.number + charMixer;
             uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, targetBlock);
@@ -2402,15 +2470,138 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
             uint256 rareCheck = randomizer.sliceNumber(random, 10, rarePercentage[1], charMixer);
 
             if (rareCheck <= rarePercentage[0]) {
-                return _mintRare(_msgSender());
+                return _mintRare(_owner);
             } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
             }
         } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
         }
 
     }
+
+    function _mintRare(address _owner) internal returns (uint256) {
+        require(rareCurrentSupply < maxCharSupply[0]);
+
+        uint256[3] memory mixer = _mixer(_owner, rareCurrentSupply/addDef);
+        
+        uint256 typeIterations = 0;
+        uint256 skillIterations = 0;
+
+        while(currentRareCharSupply[mixer[0]] == maxRareCharSupply[mixer[0]]) {
+            require(typeIterations < charType.length);
+            mixer[0] += 1;
+            if(mixer[0] > charType.length) {
+                mixer[0] -= charType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations == charType.length) {
+            return (0);
+        }
+
+        while(currentSpecificRareCharSupply[mixer[0]][mixer[1]] == maxSpecificRareCharSupply[mixer[0]][mixer[1]]) {
+            require(skillIterations < charSkill.length);
+            mixer[1] += 1;
+            if(mixer[1] > charSkill.length) {
+                mixer[1] -= charSkill.length;
+            }
+
+            skillIterations += 1;
+        }
+        
+        if(skillIterations == charSkill.length) {
+            return (0);
+        }
+
+        uint256[3] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareCharSupply[mixer[0]] + 1, currentSpecificRareCharSupply[mixer[0]][mixer[1]] + 1];
+
+        _createCharacter(
+            _currentSupplyInfo,
+            0,
+            mixer[0],
+            mixer[1],
+            1,
+            baseHP,
+            baseNextXP,
+            rareBaseStat[0],
+            rareBaseStat[1] + mixer[2]        
+        );
+
+        rareCurrentSupply += 1;
+        currentRareCharSupply[mixer[0]] += 1;
+        currentSpecificRareCharSupply[mixer[0]][mixer[1]] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+    }
+
+    function _mintCommon(address _owner) internal returns (uint256) {
+        require(commonCurrentSupply < maxCharSupply[1]);
+
+        uint256[3] memory mixer = _mixer(_owner, commonCurrentSupply/addDef);
+        
+        uint256 typeIterations = 0;
+        uint256 skillIterations = 0;
+
+        while(currentCommonCharSupply[mixer[0]] == maxCommonCharSupply[mixer[0]]) {
+            require(typeIterations < charType.length);
+            mixer[0] += 1;
+            if(mixer[0] > charType.length) {
+                mixer[0] -= charType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations == charType.length) {
+            return (0);
+        }
+
+        while(currentSpecificCommonCharSupply[mixer[0]][mixer[1]] == maxSpecificCommonCharSupply[mixer[0]][mixer[1]]) {
+            require(skillIterations < charSkill.length);
+            mixer[1] += 1;
+            if(mixer[1] > charSkill.length) {
+                mixer[1] -= charSkill.length;
+            }
+
+            skillIterations += 1;
+        }
+        
+        if (skillIterations == charSkill.length) {
+            return (0);
+        }
+
+        uint256[3] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonCharSupply[mixer[0]] + 1, currentSpecificCommonCharSupply[mixer[0]][mixer[1]] + 1];
+
+        _createCharacter(
+            _currentSupplyInfo,
+            1,
+            mixer[0],
+            mixer[1],
+            1,
+            baseHP,
+            baseNextXP,
+            commonBaseStat[0],
+            commonBaseStat[1] + mixer[2]        
+        );
+
+        commonCurrentSupply += 1;
+        currentCommonCharSupply[mixer[0]] += 1;
+        currentSpecificCommonCharSupply[mixer[0]][mixer[1]] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+
+    }
+
+    /* NFT drop logic functions */
 
     function dropSpecific(
         address _owner,
@@ -2504,67 +2695,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
 
     }
 
-    function _mintRare(address _owner) internal returns (uint256) {
-        require(rareCurrentSupply < maxCharSupply[0]);
-
-        uint256[3] memory mixer = _mixer(_owner, rareCurrentSupply/addDef);
-        
-        uint256 typeIterations = 0;
-        uint256 skillIterations = 0;
-
-        while(currentRareCharSupply[mixer[0]] == maxRareCharSupply[mixer[0]]) {
-            require(typeIterations < charType.length);
-            mixer[0] += 1;
-            if(mixer[0] > charType.length) {
-                mixer[0] -= charType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations == charType.length) {
-            return (0);
-        }
-
-        while(currentSpecificRareCharSupply[mixer[0]][mixer[1]] == maxSpecificRareCharSupply[mixer[0]][mixer[1]]) {
-            require(skillIterations < charSkill.length);
-            mixer[1] += 1;
-            if(mixer[1] > charSkill.length) {
-                mixer[1] -= charSkill.length;
-            }
-
-            skillIterations += 1;
-        }
-        
-        if(skillIterations == charSkill.length) {
-            return (0);
-        }
-
-        uint256[3] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareCharSupply[mixer[0]] + 1, currentSpecificRareCharSupply[mixer[0]][mixer[1]] + 1];
-
-        _createCharacter(
-            _currentSupplyInfo,
-            0,
-            mixer[0],
-            mixer[1],
-            1,
-            baseHP,
-            baseNextXP,
-            rareBaseStat[0],
-            rareBaseStat[1] + mixer[2]        
-        );
-
-        rareCurrentSupply += 1;
-        currentRareCharSupply[mixer[0]] += 1;
-        currentSpecificRareCharSupply[mixer[0]][mixer[1]] += 1;
-
-        uint256 tokenID = _tokenIdCounter.current();
-        _safeMint(_owner);
-
-        return (tokenID);
-    }
-
-    function _mintRareDrop(address _owner) internal {
+    function _mintRareDrop(address _owner) internal returns (uint256) {
         require(rareCurrentSupply < maxCharSupply[0]);
 
         uint256[3] memory mixer = _mixer(_owner, rareCurrentSupply/addDef);
@@ -2594,70 +2725,11 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
 
         emit AirdropCharacter(_owner, tokenID);
 
-    }
-
-    function _mintCommon(address _owner) internal returns (uint256) {
-        require(commonCurrentSupply < maxCharSupply[1]);
-
-        uint256[3] memory mixer = _mixer(_owner, commonCurrentSupply/addDef);
-        
-        uint256 typeIterations = 0;
-        uint256 skillIterations = 0;
-
-        while(currentCommonCharSupply[mixer[0]] == maxCommonCharSupply[mixer[0]]) {
-            require(typeIterations < charType.length);
-            mixer[0] += 1;
-            if(mixer[0] > charType.length) {
-                mixer[0] -= charType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations == charType.length) {
-            return (0);
-        }
-
-        while(currentSpecificCommonCharSupply[mixer[0]][mixer[1]] == maxSpecificCommonCharSupply[mixer[0]][mixer[1]]) {
-            require(skillIterations < charSkill.length);
-            mixer[1] += 1;
-            if(mixer[1] > charSkill.length) {
-                mixer[1] -= charSkill.length;
-            }
-
-            skillIterations += 1;
-        }
-        
-        if (skillIterations == charSkill.length) {
-            return (0);
-        }
-
-        uint256[3] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonCharSupply[mixer[0]] + 1, currentSpecificCommonCharSupply[mixer[0]][mixer[1]] + 1];
-
-        _createCharacter(
-            _currentSupplyInfo,
-            1,
-            mixer[0],
-            mixer[1],
-            1,
-            baseHP,
-            baseNextXP,
-            commonBaseStat[0],
-            commonBaseStat[1] + mixer[2]        
-        );
-
-        commonCurrentSupply += 1;
-        currentCommonCharSupply[mixer[0]] += 1;
-        currentSpecificCommonCharSupply[mixer[0]][mixer[1]] += 1;
-
-        uint256 tokenID = _tokenIdCounter.current();
-        _safeMint(_owner);
-
-        return (tokenID);
+        return tokenID;
 
     }
 
-    function _mintCommonDrop(address _owner) internal {
+    function _mintCommonDrop(address _owner) internal returns (uint256) {
         require(commonCurrentSupply < maxCharSupply[1]);
 
         uint256[3] memory mixer = _mixer(_owner, commonCurrentSupply/addDef);
@@ -2687,55 +2759,10 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         
         emit AirdropCharacter(_owner, tokenID);
 
+        return tokenID;
     }
 
-    function _mixer(address _owner, uint256 _offset) internal view returns (uint256[3] memory){
-        uint256 userAddress = uint256(uint160(_owner));
-        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
-
-        uint256 _charType = randomizer.sliceNumber(random, charType.length, 1, charType.length);
-        uint256 _charSkill = randomizer.sliceNumber(random, charSkill.length, 1, charSkill.length);
-        uint256 _addDef = randomizer.sliceNumber(random, addDef, 1, _offset);
-
-        return [_charType, _charSkill, _addDef];
-    }
-
-    function _createCharacter(
-        uint256[3] memory _currentSupplyInfo,
-        uint256 _charStatus,
-        uint256 _charType,
-        uint256 _charSkill,
-        uint256 _charLevel,
-        uint256 _baseHP,
-        uint256 _baseXP,
-        uint256 _baseAttack,
-        uint256 _baseDefence        
-    ) internal {
-        Character memory _apocChar = Character({
-            charIndex: _currentSupplyInfo,
-            charEquip: false,
-            charStatus: _charStatus,
-            charType: _charType,
-            charSkill: _charSkill,
-            charLevel: _charLevel,
-            charHP: _baseHP,
-            charXP: 0,
-            charNextXP: _baseXP,
-            baseAttack: _baseAttack,
-            baseDefence: _baseDefence,
-            angelModifier: 0
-        });
-        
-        apocChar.push(_apocChar);
-    }
-
-    function _safeMint(address to) internal {
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        _safeMint(to, tokenId);
-
-        emit MintNewCharacter(to, tokenId);
-    }
+    /* NFT ERC logic functions */
 
     function _beforeTokenTransfer(address from, address to, uint256 tokenId)
         internal
@@ -2772,6 +2799,7 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
     string private cid;
     
     struct Weapon {
+        uint256 tokenID;
         uint256[2] weaponIndex;
         bool weaponEquip;
         uint256 weaponStatus;
@@ -2817,6 +2845,7 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
     mapping(uint256 => uint256) currentRareWeaponSupply;
     mapping(uint256 => mapping(uint256 => uint256)) public currentSpecificUpgradeWeaponSupply;
     
+
     /** CONSTRUCTOR **/
     constructor(
         string memory _name,
@@ -2879,13 +2908,7 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
     /** FUNCTION **/
 
-    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
-        randomizer = _randomizer;
-    }
-
-    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
-        return randomizer;
-    }
+    /* General functions */
 
     function pause() public whenNotPaused authorized {
         _pause();
@@ -2911,6 +2934,18 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         return URI;
     }
 
+    /* Randomizer functions */
+
+    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
+        randomizer = _randomizer;
+    }
+
+    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
+        return randomizer;
+    }
+
+    /* Supply functions */
+
     function addSpecificMaxWeaponSupply(
         uint256 _weaponStatus,
         uint256 _weaponType,
@@ -2934,6 +2969,8 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         emit AddWeaponSupply(_maxWeaponSupply);
     }
 
+    /* Default stats functions */
+
     function setUpgradePercentage(uint256 _upgradeNumerator, uint256 _upgradePower) public authorized {
         require(_upgradeNumerator > 0 && _upgradePower > 0);
         upgradePercentage = [_upgradeNumerator, _upgradePower];
@@ -2944,10 +2981,7 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         rarePercentage = [_rareNumerator, _rarePower];
     }
 
-    function setDefaultInfo(
-        uint256 _maxLevel,
-        uint256 _maxUpgradeStatus
-    ) public authorized {
+    function setDefaultInfo(uint256 _maxLevel, uint256 _maxUpgradeStatus) public authorized {
         require(_maxLevel > 0);
         maxLevel = _maxLevel;
         maxUpgradeStatus = _maxUpgradeStatus;
@@ -3046,6 +3080,10 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         }
     }
 
+    /* Weapon attributes functions */
+
+    // Setter
+
     function updateWeaponEquip(uint256 _tokenID, bool _equip) external whenNotPaused authorized {
         require(apocWeapon[_tokenID].weaponEquip != _equip);
         apocWeapon[_tokenID].weaponEquip = _equip;
@@ -3097,6 +3135,8 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         }
     }
 
+    // Getter
+
     function getWeaponIndex(uint256 _tokenID) public view returns(uint256[2] memory) {
         return apocWeapon[_tokenID].weaponIndex;
     }
@@ -3139,6 +3179,49 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
         return imgURI;
     }
+
+    /* NFT general logic functions */
+
+    function _mixer(address _owner) internal view returns (uint256){
+        uint256 userAddress = uint256(uint160(_owner));
+        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
+
+        uint256 _weaponType = randomizer.sliceNumber(random, weaponType.length, 1, weaponType.length);
+
+        return _weaponType;
+    }
+
+    function _createWeapon(
+        uint256[2] memory _currentSupplyInfo,
+        uint256 _weaponStatus,
+        uint256 _weaponType,
+        uint256 _weaponLevel,
+        uint256 _weaponEndurance,
+        uint256 _baseAttack
+    ) internal {
+        Weapon memory _apocWeapon = Weapon({
+            tokenID: _tokenIdCounter.current(),
+            weaponIndex: _currentSupplyInfo,
+            weaponEquip: false,
+            weaponStatus: _weaponStatus,
+            weaponType: _weaponType,
+            weaponLevel: _weaponLevel,
+            weaponEndurance: _weaponEndurance,
+            baseAttack: _baseAttack
+        });
+        
+        apocWeapon.push(_apocWeapon);
+    }
+
+    function _safeMint(address to) internal {
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(to, tokenId);
+
+        emit MintNewWeapon(to, tokenId);
+    }
+
+    /* NFT upgrade logic functions */
 
     function _burnUpgrade(uint256 _tokenID) internal {
         _burn(_tokenID);
@@ -3202,14 +3285,16 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
     }
 
-    function mintNewWeapon() external whenNotPaused authorized returns (uint256){
+    /* NFT mint logic functions */
+
+    function mintNewWeapon(address _owner) external whenNotPaused authorized returns (uint256){
 
         require(totalSupply() < totalMaxSupply);
 
         if (commonCurrentSupply == maxWeaponSupply[1] && rareCurrentSupply < maxWeaponSupply[0]) {
-            return _mintRare(_msgSender());
+            return _mintRare(_owner);
         } else if (commonCurrentSupply < maxWeaponSupply[1] && rareCurrentSupply < maxWeaponSupply[0]) {
-            uint256 userAddress = uint256(uint160(_msgSender()));
+            uint256 userAddress = uint256(uint160(_owner));
             uint256 weaponMixer = weaponStatus.length + weaponType.length;
             uint256 targetBlock = block.number + weaponMixer;
             uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, targetBlock);
@@ -3217,15 +3302,100 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
             uint256 rareCheck = randomizer.sliceNumber(random, 10, rarePercentage[1], weaponMixer);
 
             if (rareCheck <= rarePercentage[0]) {
-                return _mintRare(_msgSender());
+                return _mintRare(_owner);
             } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
             }
         } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
         }
 
     }
+
+    function _mintRare(address _owner) internal returns (uint256) {
+        require(rareCurrentSupply < maxWeaponSupply[0]);
+
+        uint256 mixer = _mixer(_owner);
+        
+        uint256 typeIterations = 0;
+
+        while(currentRareWeaponSupply[mixer] == maxRareWeaponSupply[mixer]) {
+            require(typeIterations < weaponType.length);
+            mixer += 1;
+            if(mixer > weaponType.length) {
+                mixer -= weaponType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations >= weaponType.length) {
+            return (0);
+        }
+
+        uint256[2] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareWeaponSupply[mixer] + 1];
+
+        _createWeapon(
+            _currentSupplyInfo,
+            0,
+            mixer,
+            0,
+            rareBaseStat[0],
+            rareBaseStat[1]
+        );
+
+        rareCurrentSupply += 1;
+        currentRareWeaponSupply[mixer] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+    }
+
+    function _mintCommon(address _owner) internal returns (uint256) {
+        require(commonCurrentSupply < maxWeaponSupply[1]);
+
+        uint256 mixer = _mixer(_owner);
+        
+        uint256 typeIterations = 0;
+
+        while(currentCommonWeaponSupply[mixer] == maxCommonWeaponSupply[mixer]) {
+            require(typeIterations < weaponType.length);
+            mixer += 1;
+            if(mixer > weaponType.length) {
+                mixer -= weaponType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations >= weaponType.length) {
+            return (0);
+        }
+
+        uint256[2] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonWeaponSupply[mixer] + 1];
+
+        _createWeapon(
+            _currentSupplyInfo,
+            1,
+            mixer,
+            0,
+            commonBaseStat[0],
+            commonBaseStat[1]
+        );
+
+        commonCurrentSupply += 1;
+        currentCommonWeaponSupply[mixer] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+
+    }
+
+    /* NFT drop logic functions */
 
     function dropSpecific(
         address _owner,
@@ -3282,12 +3452,6 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         _safeMint(_owner);
     }
 
-    function mobDropRare(
-        address _owner
-    ) external whenNotPaused authorized returns (uint256) {
-        return _mintRareDrop(_owner);
-    }
-
     function dropRandom(
         address[] memory _owner
     ) external whenNotPaused onlyOwner {
@@ -3308,45 +3472,10 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
     }
 
-    function _mintRare(address _owner) internal returns (uint256) {
-        require(rareCurrentSupply < maxWeaponSupply[0]);
-
-        uint256 mixer = _mixer(_owner);
-        
-        uint256 typeIterations = 0;
-
-        while(currentRareWeaponSupply[mixer] == maxRareWeaponSupply[mixer]) {
-            require(typeIterations < weaponType.length);
-            mixer += 1;
-            if(mixer > weaponType.length) {
-                mixer -= weaponType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations >= weaponType.length) {
-            return (0);
-        }
-
-        uint256[2] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareWeaponSupply[mixer] + 1];
-
-        _createWeapon(
-            _currentSupplyInfo,
-            0,
-            mixer,
-            0,
-            rareBaseStat[0],
-            rareBaseStat[1]
-        );
-
-        rareCurrentSupply += 1;
-        currentRareWeaponSupply[mixer] += 1;
-
-        uint256 tokenID = _tokenIdCounter.current();
-        _safeMint(_owner);
-
-        return (tokenID);
+    function mobDropRare(
+        address _owner
+    ) external whenNotPaused authorized returns (uint256) {
+        return _mintRareDrop(_owner);
     }
 
     function _mintRareDrop(address _owner) internal returns (uint256) {
@@ -3372,53 +3501,11 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
         uint256 tokenID = _tokenIdCounter.current();
         _safeMint(_owner);
-        
-        return (tokenID);
+
+        return tokenID;
     }
 
-    function _mintCommon(address _owner) internal returns (uint256) {
-        require(commonCurrentSupply < maxWeaponSupply[1]);
-
-        uint256 mixer = _mixer(_owner);
-        
-        uint256 typeIterations = 0;
-
-        while(currentCommonWeaponSupply[mixer] == maxCommonWeaponSupply[mixer]) {
-            require(typeIterations < weaponType.length);
-            mixer += 1;
-            if(mixer > weaponType.length) {
-                mixer -= weaponType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations >= weaponType.length) {
-            return (0);
-        }
-
-        uint256[2] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonWeaponSupply[mixer] + 1];
-
-        _createWeapon(
-            _currentSupplyInfo,
-            1,
-            mixer,
-            0,
-            commonBaseStat[0],
-            commonBaseStat[1]
-        );
-
-        commonCurrentSupply += 1;
-        currentCommonWeaponSupply[mixer] += 1;
-
-        uint256 tokenID = _tokenIdCounter.current();
-        _safeMint(_owner);
-
-        return (tokenID);
-
-    }
-
-    function _mintCommonDrop(address _owner) internal {
+    function _mintCommonDrop(address _owner) internal returns (uint256) {
         require(commonCurrentSupply < maxWeaponSupply[1]);
 
         uint256 mixer = _mixer(_owner);
@@ -3439,46 +3526,13 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         commonCurrentSupply += 1;
         currentCommonWeaponSupply[mixer] += 1;
 
+        uint256 tokenID = _tokenIdCounter.current();
         _safeMint(_owner);
+
+        return tokenID;
     }
 
-    function _mixer(address _owner) internal view returns (uint256){
-        uint256 userAddress = uint256(uint160(_owner));
-        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
-
-        uint256 _weaponType = randomizer.sliceNumber(random, weaponType.length, 1, weaponType.length);
-
-        return _weaponType;
-    }
-
-    function _createWeapon(
-        uint256[2] memory _currentSupplyInfo,
-        uint256 _weaponStatus,
-        uint256 _weaponType,
-        uint256 _weaponLevel,
-        uint256 _weaponEndurance,
-        uint256 _baseAttack
-    ) internal {
-        Weapon memory _apocWeapon = Weapon({
-            weaponIndex: _currentSupplyInfo,
-            weaponEquip: false,
-            weaponStatus: _weaponStatus,
-            weaponType: _weaponType,
-            weaponLevel: _weaponLevel,
-            weaponEndurance: _weaponEndurance,
-            baseAttack: _baseAttack
-        });
-        
-        apocWeapon.push(_apocWeapon);
-    }
-
-    function _safeMint(address to) internal {
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        _safeMint(to, tokenId);
-
-        emit MintNewWeapon(to, tokenId);
-    }
+    /* NFT ERC logic functions */
 
     function _beforeTokenTransfer(address from, address to, uint256 tokenId)
         internal
@@ -3515,6 +3569,7 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
     string private cid;
     
     struct Wand {
+        uint256 tokenID;
         uint256[2] wandIndex;
         bool wandEquip;
         uint256 wandStatus;
@@ -3560,6 +3615,7 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
     mapping(uint256 => uint256) currentRareWandSupply;
     mapping(uint256 => mapping(uint256 => uint256)) public currentSpecificUpgradeWandSupply;
     
+
     /** CONSTRUCTOR **/
     constructor(
         string memory _name,
@@ -3622,13 +3678,7 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
 
     /** FUNCTION **/
 
-    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
-        randomizer = _randomizer;
-    }
-
-    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
-        return randomizer;
-    }
+    /* General functions */
 
     function pause() public whenNotPaused authorized {
         _pause();
@@ -3654,6 +3704,18 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         return URI;
     }
 
+    /* Randomizer functions */
+
+    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
+        randomizer = _randomizer;
+    }
+
+    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
+        return randomizer;
+    }
+
+    /* Supply functions */
+
     function addSpecificMaxWandSupply(
         uint256 _wandStatus,
         uint256 _wandType,
@@ -3677,6 +3739,8 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         emit AddWandSupply(_maxWandSupply);
     }
 
+    /* Default stats functions */
+
     function setUpgradePercentage(uint256 _upgradeNumerator, uint256 _upgradePower) public authorized {
         require(_upgradeNumerator > 0 && _upgradePower > 0);
         upgradePercentage = [_upgradeNumerator, _upgradePower];
@@ -3687,10 +3751,7 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         rarePercentage = [_rareNumerator, _rarePower];
     }
 
-    function setDefaultInfo(
-        uint256 _maxLevel,
-        uint256 _maxUpgradeStatus
-    ) public authorized {
+    function setDefaultInfo(uint256 _maxLevel, uint256 _maxUpgradeStatus) public authorized {
         require(_maxLevel > 0);
         maxLevel = _maxLevel;
         maxUpgradeStatus = _maxUpgradeStatus;
@@ -3789,6 +3850,10 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         }
     }
 
+    /* Wand attributes functions */
+
+    // Setter
+
     function updateWandEquip(uint256 _tokenID, bool _equip) external whenNotPaused authorized {
         require(apocWand[_tokenID].wandEquip != _equip);
         apocWand[_tokenID].wandEquip = _equip;
@@ -3840,6 +3905,8 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         }
     }
 
+    // Getter
+
     function getWandIndex(uint256 _tokenID) public view returns(uint256[2] memory) {
         return apocWand[_tokenID].wandIndex;
     }
@@ -3882,6 +3949,49 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
 
         return imgURI;
     }
+
+    /* NFT general logic functions */
+
+    function _mixer(address _owner) internal view returns (uint256){
+        uint256 userAddress = uint256(uint160(_owner));
+        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
+
+        uint256 _wandType = randomizer.sliceNumber(random, wandType.length, 1, wandType.length);
+
+        return _wandType;
+    }
+
+    function _createWand(
+        uint256[2] memory _currentSupplyInfo,
+        uint256 _wandStatus,
+        uint256 _wandType,
+        uint256 _wandLevel,
+        uint256 _wandEndurance,
+        uint256 _baseAttack
+    ) internal {
+        Wand memory _apocWand = Wand({
+            tokenID: _tokenIdCounter.current(),
+            wandIndex: _currentSupplyInfo,
+            wandEquip: false,
+            wandStatus: _wandStatus,
+            wandType: _wandType,
+            wandLevel: _wandLevel,
+            wandEndurance: _wandEndurance,
+            baseAttack: _baseAttack
+        });
+        
+        apocWand.push(_apocWand);
+    }
+
+    function _safeMint(address to) internal {
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(to, tokenId);
+
+        emit MintNewWand(to, tokenId);
+    }
+
+    /* NFT upgrade logic functions */
 
     function _burnUpgrade(uint256 _tokenID) internal {
         _burn(_tokenID);
@@ -3945,14 +4055,16 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
 
     }
 
-    function mintNewWand() external whenNotPaused authorized returns (uint256){
+    /* NFT mint logic functions */
+
+    function mintNewWand(address _owner) external whenNotPaused authorized returns (uint256){
 
         require(totalSupply() < totalMaxSupply);
 
         if (commonCurrentSupply == maxWandSupply[1] && rareCurrentSupply < maxWandSupply[0]) {
-            return _mintRare(_msgSender());
+            return _mintRare(_owner);
         } else if (commonCurrentSupply < maxWandSupply[1] && rareCurrentSupply < maxWandSupply[0]) {
-            uint256 userAddress = uint256(uint160(_msgSender()));
+            uint256 userAddress = uint256(uint160(_owner));
             uint256 wandMixer = wandStatus.length + wandType.length;
             uint256 targetBlock = block.number + wandMixer;
             uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, targetBlock);
@@ -3960,15 +4072,100 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
             uint256 rareCheck = randomizer.sliceNumber(random, 10, rarePercentage[1], wandMixer);
 
             if (rareCheck <= rarePercentage[0]) {
-                return _mintRare(_msgSender());
+                return _mintRare(_owner);
             } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
             }
         } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
         }
 
     }
+
+    function _mintRare(address _owner) internal returns (uint256) {
+        require(rareCurrentSupply < maxWandSupply[0]);
+
+        uint256 mixer = _mixer(_owner);
+        
+        uint256 typeIterations = 0;
+
+        while(currentRareWandSupply[mixer] == maxRareWandSupply[mixer]) {
+            require(typeIterations < wandType.length);
+            mixer += 1;
+            if(mixer > wandType.length) {
+                mixer -= wandType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations >= wandType.length) {
+            return (0);
+        }
+
+        uint256[2] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareWandSupply[mixer] + 1];
+
+        _createWand(
+            _currentSupplyInfo,
+            0,
+            mixer,
+            0,
+            rareBaseStat[0],
+            rareBaseStat[1]
+        );
+
+        rareCurrentSupply += 1;
+        currentRareWandSupply[mixer] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+    }
+
+    function _mintCommon(address _owner) internal returns (uint256) {
+        require(commonCurrentSupply < maxWandSupply[1]);
+
+        uint256 mixer = _mixer(_owner);
+        
+        uint256 typeIterations = 0;
+
+        while(currentCommonWandSupply[mixer] == maxCommonWandSupply[mixer]) {
+            require(typeIterations < wandType.length);
+            mixer += 1;
+            if(mixer > wandType.length) {
+                mixer -= wandType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations >= wandType.length) {
+            return (0);
+        }
+
+        uint256[2] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonWandSupply[mixer] + 1];
+
+        _createWand(
+            _currentSupplyInfo,
+            1,
+            mixer,
+            0,
+            commonBaseStat[0],
+            commonBaseStat[1]
+        );
+
+        commonCurrentSupply += 1;
+        currentCommonWandSupply[mixer] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+
+    }
+
+    /* NFT drop logic functions */
 
     function dropSpecific(
         address _owner,
@@ -4025,12 +4222,6 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         _safeMint(_owner);
     }
 
-    function mobDropRare(
-        address _owner
-    ) external whenNotPaused authorized returns (uint256) {
-        return _mintRareDrop(_owner);
-    }
-
     function dropRandom(
         address[] memory _owner
     ) external whenNotPaused onlyOwner {
@@ -4051,45 +4242,10 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
 
     }
 
-    function _mintRare(address _owner) internal returns (uint256) {
-        require(rareCurrentSupply < maxWandSupply[0]);
-
-        uint256 mixer = _mixer(_owner);
-        
-        uint256 typeIterations = 0;
-
-        while(currentRareWandSupply[mixer] == maxRareWandSupply[mixer]) {
-            require(typeIterations < wandType.length);
-            mixer += 1;
-            if(mixer > wandType.length) {
-                mixer -= wandType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations >= wandType.length) {
-            return (0);
-        }
-
-        uint256[2] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareWandSupply[mixer] + 1];
-
-        _createWand(
-            _currentSupplyInfo,
-            0,
-            mixer,
-            0,
-            rareBaseStat[0],
-            rareBaseStat[1]
-        );
-
-        rareCurrentSupply += 1;
-        currentRareWandSupply[mixer] += 1;
-
-        uint256 tokenID = _tokenIdCounter.current();
-        _safeMint(_owner);
-
-        return (tokenID);
+    function mobDropRare(
+        address _owner
+    ) external whenNotPaused authorized returns (uint256) {
+        return _mintRareDrop(_owner);
     }
 
     function _mintRareDrop(address _owner) internal returns (uint256) {
@@ -4115,53 +4271,11 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
 
         uint256 tokenID = _tokenIdCounter.current();
         _safeMint(_owner);
-        
-        return (tokenID);
+
+        return tokenID;
     }
 
-    function _mintCommon(address _owner) internal returns (uint256) {
-        require(commonCurrentSupply < maxWandSupply[1]);
-
-        uint256 mixer = _mixer(_owner);
-        
-        uint256 typeIterations = 0;
-
-        while(currentCommonWandSupply[mixer] == maxCommonWandSupply[mixer]) {
-            require(typeIterations < wandType.length);
-            mixer += 1;
-            if(mixer > wandType.length) {
-                mixer -= wandType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations >= wandType.length) {
-            return (0);
-        }
-
-        uint256[2] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonWandSupply[mixer] + 1];
-
-        _createWand(
-            _currentSupplyInfo,
-            1,
-            mixer,
-            0,
-            commonBaseStat[0],
-            commonBaseStat[1]
-        );
-
-        commonCurrentSupply += 1;
-        currentCommonWandSupply[mixer] += 1;
-
-        uint256 tokenID = _tokenIdCounter.current();
-        _safeMint(_owner);
-
-        return (tokenID);
-
-    }
-
-    function _mintCommonDrop(address _owner) internal {
+    function _mintCommonDrop(address _owner) internal returns (uint256) {
         require(commonCurrentSupply < maxWandSupply[1]);
 
         uint256 mixer = _mixer(_owner);
@@ -4182,46 +4296,13 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         commonCurrentSupply += 1;
         currentCommonWandSupply[mixer] += 1;
 
+        uint256 tokenID = _tokenIdCounter.current();
         _safeMint(_owner);
+
+        return tokenID;
     }
 
-    function _mixer(address _owner) internal view returns (uint256){
-        uint256 userAddress = uint256(uint160(_owner));
-        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
-
-        uint256 _wandType = randomizer.sliceNumber(random, wandType.length, 1, wandType.length);
-
-        return _wandType;
-    }
-
-    function _createWand(
-        uint256[2] memory _currentSupplyInfo,
-        uint256 _wandStatus,
-        uint256 _wandType,
-        uint256 _wandLevel,
-        uint256 _wandEndurance,
-        uint256 _baseAttack
-    ) internal {
-        Wand memory _apocWand = Wand({
-            wandIndex: _currentSupplyInfo,
-            wandEquip: false,
-            wandStatus: _wandStatus,
-            wandType: _wandType,
-            wandLevel: _wandLevel,
-            wandEndurance: _wandEndurance,
-            baseAttack: _baseAttack
-        });
-        
-        apocWand.push(_apocWand);
-    }
-
-    function _safeMint(address to) internal {
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        _safeMint(to, tokenId);
-
-        emit MintNewWand(to, tokenId);
-    }
+    /* NFT ERC logic functions */
 
     function _beforeTokenTransfer(address from, address to, uint256 tokenId)
         internal
@@ -4258,6 +4339,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
     string private cid;
     
     struct Shield {
+        uint256 tokenID;
         uint256[2] shieldIndex;
         bool shieldEquip;
         uint256 shieldStatus;
@@ -4272,7 +4354,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
     uint256[] public shieldStatus;
     uint256[] public shieldType;
-    uint256[] public shieldAttack;    
+    uint256[] public shieldDefence;    
     uint256[] public shieldUpChance;
     uint256[] public shieldDepletion;
 
@@ -4303,6 +4385,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
     mapping(uint256 => uint256) currentRareShieldSupply;
     mapping(uint256 => mapping(uint256 => uint256)) public currentSpecificUpgradeShieldSupply;
     
+
     /** CONSTRUCTOR **/
     constructor(
         string memory _name,
@@ -4319,9 +4402,9 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
         shieldStatus = [0,1];
         shieldType = [1,2];
-        shieldAttack = [3,6,10,15,20,30,50,70,100,120];
+        shieldDefence = [2,4,8,10,15,20,30,40,50,100];
         shieldUpChance = [40,38,35,32,28,23,20,15,10,5];
-        shieldDepletion = [0,0,0,0,20,30,40,60,100,100];
+        shieldDepletion = [10,10,20,30,40,50,60,80,100,100];
         commonShieldEndurance = [1000,1500,2000,2500,3000,3500,4000,4500,5000,10000];
 
         maxLevel = 10;
@@ -4331,10 +4414,10 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         
         rarePercentage = [5, 4];
 
-        addSpecificMaxShieldSupply(0, 1, 5); // 5 medusa shield
-        addSpecificMaxShieldSupply(0, 2, 5); // 5 devlin shield
+        addSpecificMaxShieldSupply(0, 1, 5); // 5 rare medusa
+        addSpecificMaxShieldSupply(0, 2, 5); // 5 rare devlin
 
-        addSpecificMaxShieldSupply(1, 1, 100000); // 100,000 tower shield
+        addSpecificMaxShieldSupply(1, 1, 100000); // 100,000 universal tower
 
         _createShield(
             [uint256(0),uint256(0)],
@@ -4358,13 +4441,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
     /** FUNCTION **/
 
-    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
-        randomizer = _randomizer;
-    }
-
-    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
-        return randomizer;
-    }
+    /* General functions */
 
     function pause() public whenNotPaused authorized {
         _pause();
@@ -4390,6 +4467,18 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         return URI;
     }
 
+    /* Randomizer functions */
+
+    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
+        randomizer = _randomizer;
+    }
+
+    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
+        return randomizer;
+    }
+
+    /* Supply functions */
+
     function addSpecificMaxShieldSupply(
         uint256 _shieldStatus,
         uint256 _shieldType,
@@ -4413,6 +4502,8 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         emit AddShieldSupply(_maxShieldSupply);
     }
 
+    /* Default stats functions */
+
     function setUpgradePercentage(uint256 _upgradeNumerator, uint256 _upgradePower) public authorized {
         require(_upgradeNumerator > 0 && _upgradePower > 0);
         upgradePercentage = [_upgradeNumerator, _upgradePower];
@@ -4423,10 +4514,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         rarePercentage = [_rareNumerator, _rarePower];
     }
 
-    function setDefaultInfo(
-        uint256 _maxLevel,
-        uint256 _maxUpgradeStatus
-    ) public authorized {
+    function setDefaultInfo(uint256 _maxLevel, uint256 _maxUpgradeStatus) public authorized {
         require(_maxLevel > 0);
         maxLevel = _maxLevel;
         maxUpgradeStatus = _maxUpgradeStatus;
@@ -4450,9 +4538,9 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         }
     }
     
-    function addShieldAttack(uint256[] memory _shieldAttack) public authorized {
-        for(uint256 i = 0; i < _shieldAttack.length; i++){
-            shieldAttack.push(_shieldAttack[i]);
+    function addShieldDefence(uint256[] memory _shieldDefence) public authorized {
+        for(uint256 i = 0; i < _shieldDefence.length; i++){
+            shieldDefence.push(_shieldDefence[i]);
         }
     }
     
@@ -4483,9 +4571,9 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         rareShieldEndurance[_shieldLevel - 1] = _rareShieldEndurance;
     }
     
-    function updateShieldAttack(uint256 _shieldLevel, uint256 _shieldAttack) public authorized {
-        require(_shieldLevel != 0 && _shieldLevel < shieldAttack.length && _shieldAttack > 0);
-        shieldAttack[_shieldLevel - 1] = _shieldAttack;
+    function updateShieldDefence(uint256 _shieldLevel, uint256 _shieldDefence) public authorized {
+        require(_shieldLevel != 0 && _shieldLevel < shieldDefence.length && _shieldDefence > 0);
+        shieldDefence[_shieldLevel - 1] = _shieldDefence;
     }
     
     function updateShieldUpChance(uint256 _shieldLevel, uint256 _shieldUpChance) public authorized {
@@ -4524,6 +4612,10 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
             shieldType.push(_typeID[i]);
         }
     }
+
+    /* Shield attributes functions */
+
+    // Setter
 
     function updateShieldEquip(uint256 _tokenID, bool _equip) external whenNotPaused authorized {
         require(apocShield[_tokenID].shieldEquip != _equip);
@@ -4576,6 +4668,8 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         }
     }
 
+    // Getter
+
     function getShieldIndex(uint256 _tokenID) public view returns(uint256[2] memory) {
         return apocShield[_tokenID].shieldIndex;
     }
@@ -4618,6 +4712,49 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
         return imgURI;
     }
+
+    /* NFT general logic functions */
+
+    function _mixer(address _owner) internal view returns (uint256){
+        uint256 userAddress = uint256(uint160(_owner));
+        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
+
+        uint256 _shieldType = randomizer.sliceNumber(random, shieldType.length, 1, shieldType.length);
+
+        return _shieldType;
+    }
+
+    function _createShield(
+        uint256[2] memory _currentSupplyInfo,
+        uint256 _shieldStatus,
+        uint256 _shieldType,
+        uint256 _shieldLevel,
+        uint256 _shieldEndurance,
+        uint256 _baseDefence
+    ) internal {
+        Shield memory _apocShield = Shield({
+            tokenID: _tokenIdCounter.current(),
+            shieldIndex: _currentSupplyInfo,
+            shieldEquip: false,
+            shieldStatus: _shieldStatus,
+            shieldType: _shieldType,
+            shieldLevel: _shieldLevel,
+            shieldEndurance: _shieldEndurance,
+            baseDefence: _baseDefence
+        });
+        
+        apocShield.push(_apocShield);
+    }
+
+    function _safeMint(address to) internal {
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(to, tokenId);
+
+        emit MintNewShield(to, tokenId);
+    }
+
+    /* NFT upgrade logic functions */
 
     function _burnUpgrade(uint256 _tokenID) internal {
         _burn(_tokenID);
@@ -4681,14 +4818,16 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
     }
 
-    function mintNewShield() external whenNotPaused authorized returns (uint256){
+    /* NFT mint logic functions */
+
+    function mintNewShield(address _owner) external whenNotPaused authorized returns (uint256){
 
         require(totalSupply() < totalMaxSupply);
 
         if (commonCurrentSupply == maxShieldSupply[1] && rareCurrentSupply < maxShieldSupply[0]) {
-            return _mintRare(_msgSender());
+            return _mintRare(_owner);
         } else if (commonCurrentSupply < maxShieldSupply[1] && rareCurrentSupply < maxShieldSupply[0]) {
-            uint256 userAddress = uint256(uint160(_msgSender()));
+            uint256 userAddress = uint256(uint160(_owner));
             uint256 shieldMixer = shieldStatus.length + shieldType.length;
             uint256 targetBlock = block.number + shieldMixer;
             uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, targetBlock);
@@ -4696,15 +4835,100 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
             uint256 rareCheck = randomizer.sliceNumber(random, 10, rarePercentage[1], shieldMixer);
 
             if (rareCheck <= rarePercentage[0]) {
-                return _mintRare(_msgSender());
+                return _mintRare(_owner);
             } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
             }
         } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
         }
 
     }
+
+    function _mintRare(address _owner) internal returns (uint256) {
+        require(rareCurrentSupply < maxShieldSupply[0]);
+
+        uint256 mixer = _mixer(_owner);
+        
+        uint256 typeIterations = 0;
+
+        while(currentRareShieldSupply[mixer] == maxRareShieldSupply[mixer]) {
+            require(typeIterations < shieldType.length);
+            mixer += 1;
+            if(mixer > shieldType.length) {
+                mixer -= shieldType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations >= shieldType.length) {
+            return (0);
+        }
+
+        uint256[2] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareShieldSupply[mixer] + 1];
+
+        _createShield(
+            _currentSupplyInfo,
+            0,
+            mixer,
+            0,
+            rareBaseStat[0],
+            rareBaseStat[1]
+        );
+
+        rareCurrentSupply += 1;
+        currentRareShieldSupply[mixer] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+    }
+
+    function _mintCommon(address _owner) internal returns (uint256) {
+        require(commonCurrentSupply < maxShieldSupply[1]);
+
+        uint256 mixer = _mixer(_owner);
+        
+        uint256 typeIterations = 0;
+
+        while(currentCommonShieldSupply[mixer] == maxCommonShieldSupply[mixer]) {
+            require(typeIterations < shieldType.length);
+            mixer += 1;
+            if(mixer > shieldType.length) {
+                mixer -= shieldType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations >= shieldType.length) {
+            return (0);
+        }
+
+        uint256[2] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonShieldSupply[mixer] + 1];
+
+        _createShield(
+            _currentSupplyInfo,
+            1,
+            mixer,
+            0,
+            commonBaseStat[0],
+            commonBaseStat[1]
+        );
+
+        commonCurrentSupply += 1;
+        currentCommonShieldSupply[mixer] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+
+    }
+
+    /* NFT drop logic functions */
 
     function dropSpecific(
         address _owner,
@@ -4761,12 +4985,6 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         _safeMint(_owner);
     }
 
-    function mobDropRare(
-        address _owner
-    ) external whenNotPaused authorized returns (uint256) {
-        return _mintRareDrop(_owner);
-    }
-
     function dropRandom(
         address[] memory _owner
     ) external whenNotPaused onlyOwner {
@@ -4787,45 +5005,10 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
     }
 
-    function _mintRare(address _owner) internal returns (uint256) {
-        require(rareCurrentSupply < maxShieldSupply[0]);
-
-        uint256 mixer = _mixer(_owner);
-        
-        uint256 typeIterations = 0;
-
-        while(currentRareShieldSupply[mixer] == maxRareShieldSupply[mixer]) {
-            require(typeIterations < shieldType.length);
-            mixer += 1;
-            if(mixer > shieldType.length) {
-                mixer -= shieldType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations >= shieldType.length) {
-            return (0);
-        }
-
-        uint256[2] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareShieldSupply[mixer] + 1];
-
-        _createShield(
-            _currentSupplyInfo,
-            0,
-            mixer,
-            0,
-            rareBaseStat[0],
-            rareBaseStat[1]
-        );
-
-        rareCurrentSupply += 1;
-        currentRareShieldSupply[mixer] += 1;
-
-        uint256 tokenID = _tokenIdCounter.current();
-        _safeMint(_owner);
-
-        return (tokenID);
+    function mobDropRare(
+        address _owner
+    ) external whenNotPaused authorized returns (uint256) {
+        return _mintRareDrop(_owner);
     }
 
     function _mintRareDrop(address _owner) internal returns (uint256) {
@@ -4851,53 +5034,11 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
         uint256 tokenID = _tokenIdCounter.current();
         _safeMint(_owner);
-        
-        return (tokenID);
+
+        return tokenID;
     }
 
-    function _mintCommon(address _owner) internal returns (uint256) {
-        require(commonCurrentSupply < maxShieldSupply[1]);
-
-        uint256 mixer = _mixer(_owner);
-        
-        uint256 typeIterations = 0;
-
-        while(currentCommonShieldSupply[mixer] == maxCommonShieldSupply[mixer]) {
-            require(typeIterations < shieldType.length);
-            mixer += 1;
-            if(mixer > shieldType.length) {
-                mixer -= shieldType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations >= shieldType.length) {
-            return (0);
-        }
-
-        uint256[2] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonShieldSupply[mixer] + 1];
-
-        _createShield(
-            _currentSupplyInfo,
-            1,
-            mixer,
-            0,
-            commonBaseStat[0],
-            commonBaseStat[1]
-        );
-
-        commonCurrentSupply += 1;
-        currentCommonShieldSupply[mixer] += 1;
-
-        uint256 tokenID = _tokenIdCounter.current();
-        _safeMint(_owner);
-
-        return (tokenID);
-
-    }
-
-    function _mintCommonDrop(address _owner) internal {
+    function _mintCommonDrop(address _owner) internal returns (uint256) {
         require(commonCurrentSupply < maxShieldSupply[1]);
 
         uint256 mixer = _mixer(_owner);
@@ -4918,46 +5059,13 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         commonCurrentSupply += 1;
         currentCommonShieldSupply[mixer] += 1;
 
+        uint256 tokenID = _tokenIdCounter.current();
         _safeMint(_owner);
+
+        return tokenID;
     }
 
-    function _mixer(address _owner) internal view returns (uint256){
-        uint256 userAddress = uint256(uint160(_owner));
-        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
-
-        uint256 _shieldType = randomizer.sliceNumber(random, shieldType.length, 1, shieldType.length);
-
-        return _shieldType;
-    }
-
-    function _createShield(
-        uint256[2] memory _currentSupplyInfo,
-        uint256 _shieldStatus,
-        uint256 _shieldType,
-        uint256 _shieldLevel,
-        uint256 _shieldEndurance,
-        uint256 _baseDefence
-    ) internal {
-        Shield memory _apocShield = Shield({
-            shieldIndex: _currentSupplyInfo,
-            shieldEquip: false,
-            shieldStatus: _shieldStatus,
-            shieldType: _shieldType,
-            shieldLevel: _shieldLevel,
-            shieldEndurance: _shieldEndurance,
-            baseDefence: _baseDefence
-        });
-        
-        apocShield.push(_apocShield);
-    }
-
-    function _safeMint(address to) internal {
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        _safeMint(to, tokenId);
-
-        emit MintNewShield(to, tokenId);
-    }
+    /* NFT ERC logic functions */
 
     function _beforeTokenTransfer(address from, address to, uint256 tokenId)
         internal
@@ -4989,11 +5097,20 @@ contract ApocalypseGame is Pausable, Auth {
     using Strings for string;
 
     /** DATA **/
-    IERC20Extended public rvzToken;
-    IERC20Extended public apocToken;
+    IERC20Extended public mintCharacterToken;
+    IERC20Extended public mintWeaponToken;
+    IERC20Extended public mintWandToken;
+    IERC20Extended public mintShieldToken;
     IERC20Extended public rewardToken;
+    
+    IERC20Extended public charLevelUpToken;
+    IERC20Extended public upgradeWeaponToken;
+    IERC20Extended public upgradeWandToken;
+    IERC20Extended public upgradeShieldToken;
 
     RewardPoolDistributor public distributor;
+    IUniswapV2Router02 public router;
+
     ApocalypseRandomizer public randomizer;
     ApocalypseCharacter public apocCharacter;
     ApocalypseWeapon public apocWeapon;
@@ -5022,12 +5139,20 @@ contract ApocalypseGame is Pausable, Auth {
     uint256 public hpRequireBase;
     uint256 public hpRecovery;
     uint256 public durationHPRecover;
-    uint256 public mintingPrice;
-    uint256 public upgradePrice;
+
     uint256 public maxSupplyIncrease;
     uint256 public lastSupplyIncrease;
     uint256 public cooldownSupplyIncrease;
     uint256 public dropPercentage;
+
+    uint256 public characterBUSDPrice;
+    uint256 public weaponBUSDPrice;
+    uint256 public wandBUSDPrice;
+    uint256 public shieldBUSDPrice;
+
+    uint256 public weaponUpgradeBUSDPrice;
+    uint256 public wandUpgradeBUSDPrice;
+    uint256 public shieldUpgradeBUSDPrice;
 
     uint256[] public baseWinningRate;
 
@@ -5039,35 +5164,53 @@ contract ApocalypseGame is Pausable, Auth {
         IERC20Extended _rvzToken,
         IERC20Extended _apocToken,
         IERC20Extended _rewardToken,
+        IUniswapV2Router02 _router,
         ApocalypseCharacter _apocCharacter,
         ApocalypseWeapon _apocWeapon,
         ApocalypseWand _apocWand,
         ApocalypseShield _apocShield,
         RewardPoolDistributor _distributor
     ) {
-        rvzToken = _rvzToken;
-        apocToken = _apocToken;
+        router = _router;
+
+        mintCharacterToken = _rvzToken;
+        mintWeaponToken = _apocToken;
+        mintWandToken = _apocToken;
+        mintShieldToken = _apocToken;
         rewardToken = _rewardToken;
+        
+        charLevelUpToken = _apocToken;
+        upgradeWeaponToken = _apocToken;
+        upgradeWandToken = _apocToken;
+        upgradeShieldToken = _apocToken;
 
         apocCharacter = _apocCharacter;
         apocWeapon = _apocWeapon;
         apocWand = _apocWand;
         apocShield = _apocShield;
         distributor = _distributor;
+
+        weaponUpgradeBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
+        wandUpgradeBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
+        shieldUpgradeBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
+
+        characterBUSDPrice = uint256(100).mul(10**rewardToken.decimals());
+        weaponBUSDPrice = uint256(50).mul(10**rewardToken.decimals());
+        wandBUSDPrice = uint256(50).mul(10**rewardToken.decimals());
+        shieldBUSDPrice = uint256(50).mul(10**rewardToken.decimals());
         
         hpRequireBase = 100;
         xpGainBase = 10;
         enduranceDeduction = 10;
         hpRecovery = 1;
         durationHPRecover = 30;
-        mintingPrice = uint256(100).mul(10**rvzToken.decimals());
-        upgradePrice = uint256(10).mul(10**apocToken.decimals());
         maxLevel = 50;
         baseHP = 1000;
         upgradeBaseHP = 1500;
         baseNextXP =1000;
         addDef = 3;
         maxUpgradeStatus = 2;
+        
         maxSupplyIncrease = 10;
         lastSupplyIncrease = block.timestamp;
         cooldownSupplyIncrease = 1 days;
@@ -5079,11 +5222,78 @@ contract ApocalypseGame is Pausable, Auth {
     
     /** EVENT **/
     event ChangeRewardToken(address caller, address prevRewardToken, address newRewardToken);
+    event ChangeMintCharacterToken(address caller, address prevMintCharacterToken, address newMintCharacterToken);
+    event ChangeMintWeaponToken(address caller, address prevMintWeaponToken, address newMintWeaponToken);
+    event ChangeMintWandToken(address caller, address prevMintWandToken, address newMintWandToken);
+    event ChangeMintShieldToken(address caller, address prevMintShieldToken, address newMintShieldToken);
     event ChangeRandomizer(address caller, address prevRandomizer, address newRandomizer);
     event ChangeRewardPool(address caller, address prevRewardPool, address newRewardPool);
+    event ChangeRouter(address caller, address prevRouter, address newRouter);
 
     
-    /** FUNCTION **/    
+    /** FUNCTION **/  
+
+    /* General functions */
+
+    function pause() public whenNotPaused authorized {
+        _pause();
+    }
+
+    function unpause() public whenPaused onlyOwner {
+        _unpause();
+    }  
+
+    /* Respective contract functions */
+
+    function changeRewardToken(IERC20Extended _rewardToken) public authorized {
+        address prevRewardToken = address(rewardToken);
+        rewardToken = _rewardToken;
+        emit ChangeRewardToken(_msgSender(), prevRewardToken, address(rewardToken));
+    }
+
+    function changeMintCharacterToken(IERC20Extended _mintCharacterToken) public authorized {
+        address prevMintCharacterToken = address(mintCharacterToken);
+        mintCharacterToken = _mintCharacterToken;
+        emit ChangeMintCharacterToken(_msgSender(), prevMintCharacterToken, address(mintCharacterToken));
+    }
+
+    function changeMintWeaponToken(IERC20Extended _mintWeaponToken) public authorized {
+        address prevMintWeaponToken = address(mintWeaponToken);
+        mintWeaponToken = _mintWeaponToken;
+        emit ChangeMintWeaponToken(_msgSender(), prevMintWeaponToken, address(mintWeaponToken));
+    }
+
+    function changeMintWandToken(IERC20Extended _mintWandToken) public authorized {
+        address prevMintWandToken = address(mintWandToken);
+        mintWandToken = _mintWandToken;
+        emit ChangeMintWandToken(_msgSender(), prevMintWandToken, address(mintWandToken));
+    }
+
+    function changeMintShieldToken(IERC20Extended _mintShieldToken) public authorized {
+        address prevMintShieldToken = address(mintShieldToken);
+        mintShieldToken = _mintShieldToken;
+        emit ChangeMintShieldToken(_msgSender(), prevMintShieldToken, address(mintShieldToken));
+    }
+
+    function changeRandomizer(ApocalypseRandomizer _randomizer) public authorized {
+        address prevRandomizer = address(randomizer);
+        randomizer = _randomizer;
+        emit ChangeRewardToken(_msgSender(), prevRandomizer, address(randomizer));
+    }
+
+    function changeRewardPool(RewardPoolDistributor _distributor) public authorized {
+        address prevDistributor = address(distributor);
+        distributor = _distributor;
+        emit ChangeRewardPool(_msgSender(), prevDistributor, address(distributor));
+    }
+
+    function changeRouter(IUniswapV2Router02 _router) public authorized {
+        address prevRouter = address(router);
+        router = _router;
+        emit ChangeRouter(_msgSender(), prevRouter, address(router));
+    }
+
+    /* Default stats functions */
 
     function setDefaultInfo(uint256 _maxLevel, uint256 _baseHP, uint256 _upgradeBaseHP, uint256 _baseNextXP, uint256 _addDef, uint256 _maxUpgradeStatus) public onlyOwner {
         require(_maxLevel > 0 && _baseHP > 0 && _upgradeBaseHP > 0 && _baseNextXP > 0 && _addDef > 0);
@@ -5107,13 +5317,9 @@ contract ApocalypseGame is Pausable, Auth {
         baseWinningRate[_characterLevel - 1] = _baseWinningRate;
     }
     
-    function updateDurationHPRecover(uint256 _durationHPRecover) public onlyOwner {
-        require(_durationHPRecover > 0);
+    function updateHPRecovery(uint256 _hpRecovery, uint256 _durationHPRecover) public onlyOwner {
+        require(_durationHPRecover > 0 && _hpRecovery > 0);
         durationHPRecover = _durationHPRecover;
-    }
-    
-    function updateHPRecovery(uint256 _hpRecovery) public onlyOwner {
-        require(_hpRecovery > 0);
         hpRecovery = _hpRecovery;
     }
     
@@ -5127,13 +5333,9 @@ contract ApocalypseGame is Pausable, Auth {
         enduranceDeduction = _enduranceDeduction;
     }
     
-    function updateMaxSupplyIncrease(uint256 _maxSupplyIncrease) public onlyOwner {
-        require(_maxSupplyIncrease > 0);
+    function updateMaxSupplyIncrease(uint256 _maxSupplyIncrease, uint256 _cooldownSupplyIncrease) public onlyOwner {
+        require(_maxSupplyIncrease > 0 && _cooldownSupplyIncrease > 0);
         maxSupplyIncrease = _maxSupplyIncrease;
-    }
-    
-    function updateCooldownSupplyIncrease(uint256 _cooldownSupplyIncrease) public onlyOwner {
-        require(_cooldownSupplyIncrease > 0);
         cooldownSupplyIncrease = _cooldownSupplyIncrease;
     }
     
@@ -5142,51 +5344,24 @@ contract ApocalypseGame is Pausable, Auth {
         dropPercentage = _dropPercentage;
     }
 
-    function changeRewardToken(IERC20Extended _rewardToken) public authorized {
-        address prevRewardToken = address(rewardToken);
-        rewardToken = _rewardToken;
-        emit ChangeRewardToken(_msgSender(), prevRewardToken, address(rewardToken));
+    function updateUpgradeBUSDPrice(uint256 _weaponUpgradeBUSDPrice, uint256 _wandUpgradeBUSDPrice, uint256 _shieldUpgradeBUSDPrice) public onlyOwner {
+        require(_weaponUpgradeBUSDPrice > 0 && _wandUpgradeBUSDPrice > 0 && _shieldUpgradeBUSDPrice > 0);
+        weaponUpgradeBUSDPrice = uint256(_weaponUpgradeBUSDPrice).mul(10**rewardToken.decimals());
+        wandUpgradeBUSDPrice = uint256(_wandUpgradeBUSDPrice).mul(10**rewardToken.decimals());
+        shieldUpgradeBUSDPrice = uint256(_shieldUpgradeBUSDPrice).mul(10**rewardToken.decimals());
     }
 
-    function changeRandomizer(ApocalypseRandomizer _randomizer) public authorized {
-        address prevRandomizer = address(randomizer);
-        randomizer = _randomizer;
-        emit ChangeRewardToken(_msgSender(), prevRandomizer, address(randomizer));
+    function updateMintBUSDPrice(uint256 _characterBUSDPrice, uint256 _weaponBUSDPrice, uint256 _wandBUSDPrice, uint256 _shieldBUSDPrice) public onlyOwner {
+        require(_characterBUSDPrice > 0 && _weaponBUSDPrice > 0 && _wandBUSDPrice > 0 && _shieldBUSDPrice > 0);
+        characterBUSDPrice = uint256(_characterBUSDPrice).mul(10**rewardToken.decimals());
+        weaponBUSDPrice = uint256(_weaponBUSDPrice).mul(10**rewardToken.decimals());
+        wandBUSDPrice = uint256(_wandBUSDPrice).mul(10**rewardToken.decimals());
+        shieldBUSDPrice = uint256(_shieldBUSDPrice).mul(10**rewardToken.decimals());
     }
 
-    function changeRewardPool(RewardPoolDistributor _distributor) public authorized {
-        address prevDistributor = address(distributor);
-        distributor = _distributor;
-        emit ChangeRewardPool(_msgSender(), prevDistributor, address(distributor));
-    }
+    /* Equip functions */
 
-    function pause() public whenNotPaused authorized {
-        _pause();
-    }
-
-    function unpause() public whenPaused onlyOwner {
-        _unpause();
-    }
-
-    function getHPRequired(uint256 _tokenID) internal view returns(uint256) {
-        return (apocCharacter.getCharLevel(_tokenID).sub(1)).mul(10).add(hpRequireBase);
-    }
-
-    function getXPGain(uint256 _tokenID) internal view returns(uint256) {
-        return (apocCharacter.getCharLevel(_tokenID).sub(1)).mul(2).add(xpGainBase);
-    }
-
-    function recoverHP(uint256 _slot) internal {
-        if (_slot == 1) {
-            uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate1);
-            uint256 recover = duration.div(durationHPRecover).mul(hpRecovery);
-            apocCharacter.recoverHP(charSlot[_msgSender()].tokenID1, recover);
-        } else if (_slot == 2) {
-            uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate2);
-            uint256 recover = duration.div(durationHPRecover).mul(hpRecovery);
-            apocCharacter.recoverHP(charSlot[_msgSender()].tokenID2, recover);
-        }
-    }
+    // Setter
 
     function equipCharSlot1(uint256 _tokenID) external {
         if(_msgSender() != owner()) {
@@ -5208,6 +5383,8 @@ contract ApocalypseGame is Pausable, Auth {
         recoverHP(1);
         apocCharacter.updateCharacterEquip(charSlot[_msgSender()].tokenID1, false);
         charSlot[_msgSender()].tokenID1 = 0;
+        unequipWeaponWandSlot1();
+        unequipShieldSlot1();
     }
 
     function equipWeaponWandSlot1(uint256 _tokenID) external {
@@ -5215,11 +5392,21 @@ contract ApocalypseGame is Pausable, Auth {
             require(_tokenID > 0);
         }
         if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 1) {
-            require(apocWeapon.getWeaponEndurance(_tokenID) > 0 && apocWeapon.getWeaponEquip(_tokenID) != true && apocWeapon.ownerOf(_tokenID) == _msgSender());
+            require(
+                apocWeapon.getWeaponEndurance(_tokenID) > 0 && 
+                apocWeapon.getWeaponEquip(_tokenID) != true && 
+                apocWeapon.ownerOf(_tokenID) == _msgSender() && 
+                apocWeapon.getWeaponType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID1)
+            );
             charSlot[_msgSender()].weaponID1 = _tokenID;
             apocWeapon.updateWeaponEquip(_tokenID, true);
         } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 2) {
-            require(apocWand.getWandEndurance(_tokenID) > 0 && apocWand.getWandEquip(_tokenID) != true && apocWand.ownerOf(_tokenID) == _msgSender());
+            require(
+                apocWand.getWandEndurance(_tokenID) > 0 &&
+                apocWand.getWandEquip(_tokenID) != true &&
+                apocWand.ownerOf(_tokenID) == _msgSender() &&
+                apocWand.getWandType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID1)
+            );
             charSlot[_msgSender()].weaponID1 = _tokenID;
             apocWand.updateWandEquip(_tokenID, true);
         }
@@ -5286,6 +5473,8 @@ contract ApocalypseGame is Pausable, Auth {
         recoverHP(2);
         apocCharacter.updateCharacterEquip(charSlot[_msgSender()].tokenID2, false);
         charSlot[_msgSender()].tokenID2 = 0;
+        unequipWeaponWandSlot2();
+        unequipShieldSlot2();
     }
 
     function equipWeaponWandSlot2(uint256 _tokenID) external {
@@ -5293,11 +5482,21 @@ contract ApocalypseGame is Pausable, Auth {
             require(_tokenID > 0);
         }
         if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 1) {
-            require(apocWeapon.getWeaponEndurance(_tokenID) > 0 && apocWeapon.getWeaponEquip(_tokenID) != true && apocWeapon.ownerOf(_tokenID) == _msgSender());
+            require(
+                apocWeapon.getWeaponEndurance(_tokenID) > 0 && 
+                apocWeapon.getWeaponEquip(_tokenID) != true && 
+                apocWeapon.ownerOf(_tokenID) == _msgSender() && 
+                apocWeapon.getWeaponType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID2)
+            );
             charSlot[_msgSender()].weaponID2 = _tokenID;
             apocWeapon.updateWeaponEquip(_tokenID, true);
         } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 2) {
-            require(apocWand.getWandEndurance(_tokenID) > 0 && apocWand.getWandEquip(_tokenID) != true && apocWand.ownerOf(_tokenID) == _msgSender());
+            require(
+                apocWand.getWandEndurance(_tokenID) > 0 && 
+                apocWand.getWandEquip(_tokenID) != true && 
+                apocWand.ownerOf(_tokenID) == _msgSender() && 
+                apocWand.getWandType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID2)
+            );
             charSlot[_msgSender()].weaponID2 = _tokenID;
             apocWand.updateWandEquip(_tokenID, true);
         }
@@ -5345,6 +5544,116 @@ contract ApocalypseGame is Pausable, Auth {
         increaseSupply();
         apocShield.updateShieldEquip(charSlot[_msgSender()].shieldID2, false);
         charSlot[_msgSender()].shieldID2 = 0;
+    }
+
+    // Getter
+
+    function getTokenIDSlot1(address _owner) public view returns (uint256) {
+        return charSlot[_owner].tokenID1;
+    }
+
+    function getTokenIDSlot2(address _owner) public view returns (uint256) {
+        return charSlot[_owner].tokenID2;
+    }
+
+    function getLastHPUpdate1(address _owner) public view returns (uint256) {
+        return charSlot[_owner].lastHPUpdate1;
+    }
+
+    function getLastHPUpdate2(address _owner) public view returns (uint256) {
+        return charSlot[_owner].lastHPUpdate2;
+    }
+
+    function getWeaponID1(address _owner) public view returns (uint256) {
+        return charSlot[_owner].weaponID1;
+    }
+
+    function getWeaponID2(address _owner) public view returns (uint256) {
+        return charSlot[_owner].weaponID2;
+    }
+
+    function getShieldID1(address _owner) public view returns (uint256) {
+        return charSlot[_owner].shieldID1;
+    }
+
+    function getShieldID2(address _owner) public view returns (uint256) {
+        return charSlot[_owner].shieldID2;
+    }
+    
+    /* Check functions */
+
+    function getSuccessRate(uint256 _tokenID, uint256 _weaponAttack) public view returns(uint256) {
+        uint256 success = baseWinningRate[apocCharacter.getCharLevel(_tokenID).sub(1)].mul(100);
+        uint256 failure = uint256(100).mul(100).sub(success);
+        uint256 totalAttack = apocCharacter.getBaseAttack(_tokenID).add(apocCharacter.getAngelModifier(_tokenID)).add(_weaponAttack);
+        return success.add(totalAttack.mul(failure).div(200));
+    }
+
+    function getHPRequired(uint256 _tokenID) internal view returns(uint256) {
+        return (apocCharacter.getCharLevel(_tokenID).sub(1)).mul(10).add(hpRequireBase);
+    }
+
+    function getXPGain(uint256 _tokenID) internal view returns(uint256) {
+        return (apocCharacter.getCharLevel(_tokenID).sub(1)).mul(2).add(xpGainBase);
+    }
+
+    function checkDrop(uint256 dropN, uint256 dropT) internal returns (uint256){
+        if (dropPercentage >= dropN && dropT == 0) {
+            return apocShield.mobDropRare(_msgSender());
+        } else if (dropPercentage >= dropN && dropT == 1) {
+            return apocWeapon.mobDropRare(_msgSender());
+        } else if (dropPercentage >= dropN && dropT == 2) {
+            return apocWand.mobDropRare(_msgSender());
+        }
+
+        return 0;
+
+    }
+
+    function increaseSupply() internal {
+        if (block.timestamp >= lastSupplyIncrease + cooldownSupplyIncrease) {
+            dailySupplyIncrease();
+            lastSupplyIncrease = block.timestamp;
+        }
+    }
+
+    function dailySupplyIncrease() internal {
+        apocCharacter.addSpecificMaxCharSupply(1, 1, 1, maxSupplyIncrease); // fencing warriors
+        apocCharacter.addSpecificMaxCharSupply(1, 1, 2, maxSupplyIncrease); // axe warriors
+        apocCharacter.addSpecificMaxCharSupply(1, 1, 3, maxSupplyIncrease); // bow warriors
+        apocCharacter.addSpecificMaxCharSupply(1, 1, 4, maxSupplyIncrease); // sword warriors
+        apocCharacter.addSpecificMaxCharSupply(1, 1, 5, maxSupplyIncrease); // hammer warriors                        
+        apocCharacter.addSpecificMaxCharSupply(1, 2, 1, maxSupplyIncrease); // energy mages
+        apocCharacter.addSpecificMaxCharSupply(1, 2, 2, maxSupplyIncrease); // lightning mages
+        apocCharacter.addSpecificMaxCharSupply(1, 2, 3, maxSupplyIncrease); // earth mages
+        apocCharacter.addSpecificMaxCharSupply(1, 2, 4, maxSupplyIncrease); // ice mages
+        apocCharacter.addSpecificMaxCharSupply(1, 2, 5, maxSupplyIncrease); // fire mages
+    }
+
+    /* Fight functions */
+
+    function recoverHP(uint256 _slot) internal {
+        if (_slot == 1) {
+            uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate1);
+            uint256 recover = duration.div(durationHPRecover).mul(hpRecovery);
+            apocCharacter.recoverHP(charSlot[_msgSender()].tokenID1, recover);
+        } else if (_slot == 2) {
+            uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate2);
+            uint256 recover = duration.div(durationHPRecover).mul(hpRecovery);
+            apocCharacter.recoverHP(charSlot[_msgSender()].tokenID2, recover);
+        }
+    }
+
+    function updateCharacter(bool fightStatus, uint256 tokenId, uint256 shieldID) internal {
+        if (fightStatus == true) {
+            uint256 totalDefence = apocCharacter.getBaseDefence(tokenId).sub(apocCharacter.getAngelModifier(tokenId)).sub(apocShield.getBaseDefence(shieldID));
+            uint256 _reduceHP = getHPRequired(tokenId).sub(totalDefence);
+            apocCharacter.reduceHP(tokenId, _reduceHP);
+            apocCharacter.receiveXP(tokenId, getXPGain(tokenId));
+            distributor.distributeReward(_msgSender(), apocCharacter.getCharLevel(tokenId).mul(10**rewardToken.decimals()));
+        } else if (fightStatus == false) {
+            apocCharacter.reduceHP(tokenId, getHPRequired(tokenId));
+        }
     }
 
     function fightSlot1() public whenNotPaused returns (bool, uint256){
@@ -5445,12 +5754,12 @@ contract ApocalypseGame is Pausable, Auth {
         
         if (
             apocCharacter.getCharType(_charTokenID) == 1 &&
-            getSuccessRate(charSlot[_msgSender()].tokenID2, apocWeapon.getBaseAttack(_charWeaponID)) >= rand[0]
+            getSuccessRate(_charTokenID, apocWeapon.getBaseAttack(_charWeaponID)) >= rand[0]
         ) {
             fightStatus = true;
         } else if (
             apocCharacter.getCharType(_charTokenID) == 2 &&
-            getSuccessRate(charSlot[_msgSender()].tokenID2, apocWand.getBaseAttack(_charWeaponID)) >= rand[0]
+            getSuccessRate(_charTokenID, apocWand.getBaseAttack(_charWeaponID)) >= rand[0]
         ) {
             fightStatus = true;
         } else {
@@ -5465,30 +5774,7 @@ contract ApocalypseGame is Pausable, Auth {
 
     }
 
-    function checkDrop(uint256 dropN, uint256 dropT) internal returns (uint256){
-        if (dropPercentage >= dropN && dropT == 0) {
-            return apocShield.mobDropRare(_msgSender());
-        } else if (dropPercentage >= dropN && dropT == 1) {
-            return apocWeapon.mobDropRare(_msgSender());
-        } else if (dropPercentage >= dropN && dropT == 2) {
-            return apocWand.mobDropRare(_msgSender());
-        }
-
-        return 0;
-
-    }
-
-    function updateCharacter(bool fightStatus, uint256 tokenId, uint256 shieldID) internal {
-        if (fightStatus == true) {
-            uint256 totalDefence = apocCharacter.getBaseDefence(tokenId).sub(apocCharacter.getAngelModifier(tokenId)).sub(apocShield.getBaseDefence(shieldID));
-            uint256 _reduceHP = getHPRequired(tokenId).sub(totalDefence);
-            apocCharacter.reduceHP(tokenId, _reduceHP);
-            apocCharacter.receiveXP(tokenId, getXPGain(tokenId));
-            distributor.distributeReward(_msgSender(), apocCharacter.getCharLevel(tokenId).mul(10**rewardToken.decimals()));
-        } else if (fightStatus == false) {
-            apocCharacter.reduceHP(tokenId, getHPRequired(tokenId));
-        }
-    }
+    /* Random mixer functions */
 
     function mixer(uint256 _charTokenID) internal view returns (uint256[3] memory) {
         uint256 userAddress = uint256(uint160(_msgSender()));
@@ -5502,77 +5788,95 @@ contract ApocalypseGame is Pausable, Auth {
         return [randomN, dropT, dropN];
     }
 
-    function getSuccessRate(uint256 _tokenID, uint256 _weaponAttack) public view returns(uint256) {
-        uint256 success = baseWinningRate[apocCharacter.getCharLevel(_tokenID).sub(1)].mul(100);
-        uint256 failure = uint256(100).mul(100).sub(success);
-        uint256 totalAttack = apocCharacter.getBaseAttack(_tokenID).add(apocCharacter.getAngelModifier(_tokenID)).add(_weaponAttack);
-        return success.add(totalAttack.mul(failure).div(200));
-    }
-
-    function increaseSupply() internal {
-        if (block.timestamp >= lastSupplyIncrease + cooldownSupplyIncrease) {
-            dailySupplyIncrease();
-            lastSupplyIncrease = block.timestamp;
-        }
-    }
-
-    function dailySupplyIncrease() internal {
-        apocCharacter.addSpecificMaxCharSupply(1, 1, 1, maxSupplyIncrease); // fencing warriors
-        apocCharacter.addSpecificMaxCharSupply(1, 1, 2, maxSupplyIncrease); // axe warriors
-        apocCharacter.addSpecificMaxCharSupply(1, 1, 3, maxSupplyIncrease); // bow warriors
-        apocCharacter.addSpecificMaxCharSupply(1, 1, 4, maxSupplyIncrease); // sword warriors
-        apocCharacter.addSpecificMaxCharSupply(1, 1, 5, maxSupplyIncrease); // hammer warriors                        
-        apocCharacter.addSpecificMaxCharSupply(1, 2, 1, maxSupplyIncrease); // energy mages
-        apocCharacter.addSpecificMaxCharSupply(1, 2, 2, maxSupplyIncrease); // lightning mages
-        apocCharacter.addSpecificMaxCharSupply(1, 2, 3, maxSupplyIncrease); // earth mages
-        apocCharacter.addSpecificMaxCharSupply(1, 2, 4, maxSupplyIncrease); // ice mages
-        apocCharacter.addSpecificMaxCharSupply(1, 2, 5, maxSupplyIncrease); // fire mages
-    }
-
     function levelUp(uint256 _tokenID) external {
         require(_msgSender() == apocCharacter.ownerOf(_tokenID));
-        apocToken.transfer(address(apocToken), upgradePrice);
+        //getXPGain(_tokenId);
+        //charLevelUpToken.transfer(address(charLevelUpToken), busd);
         apocCharacter.levelUp(_tokenID);
     }
 
+    /* Pay and upgrades functions */
+
     function upgradeWeapon(uint256 _tokenID) external {
         require(_msgSender() == apocWeapon.ownerOf(_tokenID));
-        apocToken.transfer(address(apocToken), upgradePrice);
+        uint256 exact = weaponUpgradeBUSDPrice.div(10**rewardToken.decimals());
+        address[] memory path = new address[](3);
+        path[0] = address(rewardToken);
+        path[1] = router.WETH();
+        path[2] = address(upgradeWeaponToken);
+        uint256 amount = router.getAmountsOut(weaponUpgradeBUSDPrice, path)[2].div(exact);
+        upgradeWeaponToken.transfer(address(upgradeWeaponToken), amount);
         apocWeapon.levelUp(_tokenID);
     }
 
     function upgradeWand(uint256 _tokenID) external {
         require(_msgSender() == apocWand.ownerOf(_tokenID));
-        apocToken.transfer(address(apocToken), upgradePrice);
+        uint256 exact = wandUpgradeBUSDPrice.div(10**rewardToken.decimals());
+        address[] memory path = new address[](3);
+        path[0] = address(rewardToken);
+        path[1] = router.WETH();
+        path[2] = address(upgradeWandToken);
+        uint256 amount = router.getAmountsOut(wandUpgradeBUSDPrice, path)[2].div(exact);
+        upgradeWandToken.transfer(address(upgradeWandToken), amount);
         apocWand.levelUp(_tokenID);
     }
 
     function upgradeShield(uint256 _tokenID) external {
         require(_msgSender() == apocShield.ownerOf(_tokenID));
-        apocToken.transfer(address(apocToken), upgradePrice);
+        uint256 exact = shieldUpgradeBUSDPrice.div(10**rewardToken.decimals());
+        address[] memory path = new address[](3);
+        path[0] = address(rewardToken);
+        path[1] = router.WETH();
+        path[2] = address(upgradeShieldToken);
+        uint256 amount = router.getAmountsOut(shieldUpgradeBUSDPrice, path)[2].div(exact);
+        upgradeShieldToken.transfer(address(upgradeShieldToken), amount);
         apocShield.levelUp(_tokenID);
     }
 
+    /* Pay and mint NFT functions */
+
     function mintCharacter() external {
-        rvzToken.transfer(address(rvzToken), mintingPrice);
-        apocCharacter.mintNewCharacter();
+        uint256 exact = characterBUSDPrice.div(10**rewardToken.decimals());
+        address[] memory path = new address[](3);
+        path[0] = address(rewardToken);
+        path[1] = router.WETH();
+        path[2] = address(mintCharacterToken);
+        uint256 amount = router.getAmountsOut(characterBUSDPrice, path)[2].div(exact);
+        mintCharacterToken.transfer(address(mintCharacterToken), amount);
+        apocCharacter.mintNewCharacter(_msgSender());
     }
 
     function mintWand() external {
-        apocToken.transfer(address(apocToken), mintingPrice);
-        apocWand.mintNewWand();
+        uint256 exact = wandBUSDPrice.div(10**rewardToken.decimals());
+        address[] memory path = new address[](3);
+        path[0] = address(rewardToken);
+        path[1] = router.WETH();
+        path[2] = address(mintWandToken);
+        uint256 amount = router.getAmountsOut(wandBUSDPrice, path)[2].div(exact);
+        mintWandToken.transfer(address(mintWandToken), amount);
+        apocWand.mintNewWand(_msgSender());
     }
 
     function mintWeapon() external {
-        apocToken.transfer(address(apocToken), mintingPrice);
-        apocWeapon.mintNewWeapon();
+        uint256 exact = weaponBUSDPrice.div(10**rewardToken.decimals());
+        address[] memory path = new address[](3);
+        path[0] = address(rewardToken);
+        path[1] = router.WETH();
+        path[2] = address(mintWeaponToken);
+        uint256 amount = router.getAmountsOut(weaponBUSDPrice, path)[2].div(exact);
+        mintWeaponToken.transfer(address(mintWeaponToken), amount);
+        apocWeapon.mintNewWeapon(_msgSender());
     }
 
     function mintShield() external {
-        apocToken.transfer(address(apocToken), mintingPrice);
-        apocShield.mintNewShield();
-    }
-
-    
+        uint256 exact = shieldBUSDPrice.div(10**rewardToken.decimals());
+        address[] memory path = new address[](3);
+        path[0] = address(rewardToken);
+        path[1] = router.WETH();
+        path[2] = address(mintShieldToken);
+        uint256 amount = router.getAmountsOut(shieldBUSDPrice, path)[2].div(exact);
+        mintShieldToken.transfer(address(mintShieldToken), amount);
+        apocShield.mintNewShield(_msgSender());
+    } 
 
 }
