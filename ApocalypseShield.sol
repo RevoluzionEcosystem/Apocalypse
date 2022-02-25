@@ -1672,14 +1672,29 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         commonShieldEndurance[_shieldLevel - 1] = _commonShieldEndurance;
     }
     
+    function getCommonShieldEndurance(uint256 _shieldLevel) public view returns (uint256) {
+        require(_shieldLevel != 0 && _shieldLevel < commonShieldEndurance.length);
+        return commonShieldEndurance[_shieldLevel - 1];
+    }
+    
     function updateUpgradeShieldEndurance(uint256 _shieldLevel, uint256 _upgradeShieldEndurance) public authorized {
         require(_shieldLevel != 0 && _shieldLevel < upgradeShieldEndurance.length && _upgradeShieldEndurance > 0);
         upgradeShieldEndurance[_shieldLevel - 1] = _upgradeShieldEndurance;
     }
     
+    function getUpgradeShieldEndurance(uint256 _shieldLevel) public view returns (uint256) {
+        require(_shieldLevel != 0 && _shieldLevel < upgradeShieldEndurance.length);
+        return upgradeShieldEndurance[_shieldLevel - 1];
+    }
+    
     function updateRareShieldEndurance(uint256 _shieldLevel, uint256 _rareShieldEndurance) public authorized {
         require(_shieldLevel != 0 && _shieldLevel < rareShieldEndurance.length && _rareShieldEndurance > 0);
         rareShieldEndurance[_shieldLevel - 1] = _rareShieldEndurance;
+    }
+    
+    function getRareShieldEndurance(uint256 _shieldLevel) public view returns (uint256) {
+        require(_shieldLevel != 0 && _shieldLevel < rareShieldEndurance.length);
+        return rareShieldEndurance[_shieldLevel - 1];
     }
     
     function updateShieldDefence(uint256 _shieldLevel, uint256 _shieldDefence) public authorized {
@@ -1702,14 +1717,26 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         commonBaseStat = [_baseEndurance, _baseDefence];
     }
 
+    function getCommonBaseStat() public view returns (uint256[2] memory) {
+        return commonBaseStat;
+    }
+
     function setUpgradeBaseStat(uint256 _baseEndurance, uint256 _baseDefence) public authorized {
         require(_baseEndurance > 0 && _baseDefence > 0);
         upgradeBaseStat = [_baseEndurance, _baseDefence];
     }
 
+    function getUpgradeBaseStat() public view returns (uint256[2] memory) {
+        return upgradeBaseStat;
+    }
+
     function setRareBaseStat(uint256 _baseEndurance, uint256 _baseDefence) public authorized {
         require(_baseEndurance > 0 && _baseDefence > 0);
         rareBaseStat = [_baseEndurance, _baseDefence];
+    }
+
+    function getRareBaseStat() public view returns (uint256[2] memory) {
+        return rareBaseStat;
     }
 
     function addShieldStatus(uint256[] memory _statusID) public authorized {
