@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.11;
+pragma solidity ^0.8.12;
 
 
 /** LIBRARY **/
@@ -342,6 +342,10 @@ abstract contract Context {
     function _msgData() internal view virtual returns (bytes calldata) {
         return msg.data;
     }
+
+    function _msgValue() internal view virtual returns (uint256) {
+        return msg.value;
+    }
 }
 
 /**
@@ -513,7 +517,6 @@ abstract contract Pausable is Context {
         emit Unpaused(_msgSender());
     }
 }
-
 
 /** ERC STANDARD **/
 
@@ -1358,67 +1361,6 @@ abstract contract ERC721Enumerable is ERC721, IERC721Enumerable {
 }
 
 /**
- * @dev ERC721 token with storage based token URI management.
- */
-abstract contract ERC721URIStorage is ERC721 {
-    using Strings for uint256;
-
-    // Optional mapping for token URIs
-    mapping(uint256 => string) private _tokenURIs;
-
-    /**
-     * @dev See {IERC721Metadata-tokenURI}.
-     */
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-        require(_exists(tokenId), "ERC721URIStorage: URI query for nonexistent token");
-
-        string memory _tokenURI = _tokenURIs[tokenId];
-        string memory base = _baseURI();
-
-        // If there is no base URI, return the token URI.
-        if (bytes(base).length == 0) {
-            return _tokenURI;
-        }
-        // If both are set, concatenate the baseURI and tokenURI (via abi.encodePacked).
-        if (bytes(_tokenURI).length > 0) {
-            return string(abi.encodePacked(base, _tokenURI));
-        }
-
-        return super.tokenURI(tokenId);
-    }
-
-    /**
-     * @dev Sets `_tokenURI` as the tokenURI of `tokenId`.
-     *
-     * Requirements:
-     *
-     * - `tokenId` must exist.
-     */
-    function _setTokenURI(uint256 tokenId, string memory _tokenURI) internal virtual {
-        require(_exists(tokenId), "ERC721URIStorage: URI set of nonexistent token");
-        _tokenURIs[tokenId] = _tokenURI;
-    }
-
-    /**
-     * @dev Destroys `tokenId`.
-     * The approval is cleared when the token is burned.
-     *
-     * Requirements:
-     *
-     * - `tokenId` must exist.
-     *
-     * Emits a {Transfer} event.
-     */
-    function _burn(uint256 tokenId) internal virtual override {
-        super._burn(tokenId);
-
-        if (bytes(_tokenURIs[tokenId]).length != 0) {
-            delete _tokenURIs[tokenId];
-        }
-    }
-}
-
-/**
  * @title ERC721 Burnable Token
  * @dev ERC721 Token that can be irreversibly burned (destroyed).
  */
@@ -1438,7 +1380,7 @@ abstract contract ERC721Burnable is Context, ERC721 {
 }
 
 
-/** APOCALYPSE WEAPON **/
+/** APOCALYPSE **/
 
 contract ApocalypseRandomizer {
 
@@ -1494,7 +1436,7 @@ contract ApocalypseRandomizer {
 
 }
 
-contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Auth, ERC721Burnable {
+contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burnable {
     
 
     /** LIBRARY **/
@@ -1554,6 +1496,7 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
     mapping(uint256 => uint256) currentRareWeaponSupply;
     mapping(uint256 => mapping(uint256 => uint256)) public currentSpecificUpgradeWeaponSupply;
     
+
     /** CONSTRUCTOR **/
     constructor(
         string memory _name,
@@ -1603,8 +1546,7 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
             commonBaseStat[1]
         );
 
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_msgSender(), _tokenURI);
+        _safeMint(_msgSender());
 
     }
 
@@ -1617,13 +1559,7 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
 
     /** FUNCTION **/
 
-    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
-        randomizer = _randomizer;
-    }
-
-    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
-        return randomizer;
-    }
+    /* General functions */
 
     function pause() public whenNotPaused authorized {
         _pause();
@@ -1649,6 +1585,18 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         return URI;
     }
 
+    /* Randomizer functions */
+
+    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
+        randomizer = _randomizer;
+    }
+
+    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
+        return randomizer;
+    }
+
+    /* Supply functions */
+
     function addSpecificMaxWeaponSupply(
         uint256 _weaponStatus,
         uint256 _weaponType,
@@ -1672,6 +1620,8 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         emit AddWeaponSupply(_maxWeaponSupply);
     }
 
+    /* Default stats functions */
+
     function setUpgradePercentage(uint256 _upgradeNumerator, uint256 _upgradePower) public authorized {
         require(_upgradeNumerator > 0 && _upgradePower > 0);
         upgradePercentage = [_upgradeNumerator, _upgradePower];
@@ -1682,10 +1632,7 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         rarePercentage = [_rareNumerator, _rarePower];
     }
 
-    function setDefaultInfo(
-        uint256 _maxLevel,
-        uint256 _maxUpgradeStatus
-    ) public authorized {
+    function setDefaultInfo(uint256 _maxLevel, uint256 _maxUpgradeStatus) public authorized {
         require(_maxLevel > 0);
         maxLevel = _maxLevel;
         maxUpgradeStatus = _maxUpgradeStatus;
@@ -1784,6 +1731,10 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         }
     }
 
+    /* Weapon attributes functions */
+
+    // Setter
+
     function updateWeaponEquip(uint256 _tokenID, bool _equip) external whenNotPaused authorized {
         require(apocWeapon[_tokenID].weaponEquip != _equip);
         apocWeapon[_tokenID].weaponEquip = _equip;
@@ -1835,8 +1786,34 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         }
     }
 
+    // Getter
+
     function getWeaponIndex(uint256 _tokenID) public view returns(uint256[2] memory) {
         return apocWeapon[_tokenID].weaponIndex;
+    }
+
+    function getWeaponEquip(uint256 _tokenID) public view returns(bool) {
+        return apocWeapon[_tokenID].weaponEquip;
+    }
+
+    function getWeaponStatus(uint256 _tokenID) public view returns(uint256) {
+        return apocWeapon[_tokenID].weaponStatus;
+    }
+
+    function getWeaponType(uint256 _tokenID) public view returns(uint256) {
+        return apocWeapon[_tokenID].weaponType;
+    }
+
+    function getWeaponLevel(uint256 _tokenID) public view returns(uint256) {
+        return apocWeapon[_tokenID].weaponLevel;
+    }
+
+    function getWeaponEndurance(uint256 _tokenID) public view returns(uint256) {
+        return apocWeapon[_tokenID].weaponEndurance;
+    }
+
+    function getBaseAttack(uint256 _tokenID) public view returns(uint256) {
+        return apocWeapon[_tokenID].baseAttack;
     }
 
     function getWeaponImage(uint256 _tokenID) public view returns (string memory) {
@@ -1853,6 +1830,49 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
 
         return imgURI;
     }
+
+    /* NFT general logic functions */
+
+    function _mixer(address _owner) internal view returns (uint256){
+        uint256 userAddress = uint256(uint160(_owner));
+        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
+
+        uint256 _weaponType = randomizer.sliceNumber(random, weaponType.length, 1, weaponType.length);
+
+        return _weaponType;
+    }
+
+    function _createWeapon(
+        uint256[2] memory _currentSupplyInfo,
+        uint256 _weaponStatus,
+        uint256 _weaponType,
+        uint256 _weaponLevel,
+        uint256 _weaponEndurance,
+        uint256 _baseAttack
+    ) internal {
+        Weapon memory _apocWeapon = Weapon({
+            tokenID: _tokenIdCounter.current(),
+            weaponIndex: _currentSupplyInfo,
+            weaponEquip: false,
+            weaponStatus: _weaponStatus,
+            weaponType: _weaponType,
+            weaponLevel: _weaponLevel,
+            weaponEndurance: _weaponEndurance,
+            baseAttack: _baseAttack
+        });
+        
+        apocWeapon.push(_apocWeapon);
+    }
+
+    function _safeMint(address to) internal {
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(to, tokenId);
+
+        emit MintNewWeapon(to, tokenId);
+    }
+
+    /* NFT upgrade logic functions */
 
     function _burnUpgrade(uint256 _tokenID) internal {
         _burn(_tokenID);
@@ -1901,8 +1921,7 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
             currentSpecificUpgradeWeaponSupply[_nextStatus][_weaponType] += 1;
 
             uint256 tokenID = _tokenIdCounter.current();
-            string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-            _safeMint(_owner, _tokenURI);
+            _safeMint(_owner);
 
             _burnUpgrade(_tokenID1);
             _burnUpgrade(_tokenID2);
@@ -1917,14 +1936,16 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
 
     }
 
-    function mintNewWeapon() external whenNotPaused authorized returns (uint256){
+    /* NFT mint logic functions */
+
+    function mintNewWeapon(address _owner) external whenNotPaused authorized returns (uint256){
 
         require(totalSupply() < totalMaxSupply);
 
         if (commonCurrentSupply == maxWeaponSupply[1] && rareCurrentSupply < maxWeaponSupply[0]) {
-            return _mintRare(_msgSender());
+            return _mintRare(_owner);
         } else if (commonCurrentSupply < maxWeaponSupply[1] && rareCurrentSupply < maxWeaponSupply[0]) {
-            uint256 userAddress = uint256(uint160(_msgSender()));
+            uint256 userAddress = uint256(uint160(_owner));
             uint256 weaponMixer = weaponStatus.length + weaponType.length;
             uint256 targetBlock = block.number + weaponMixer;
             uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, targetBlock);
@@ -1932,15 +1953,100 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
             uint256 rareCheck = randomizer.sliceNumber(random, 10, rarePercentage[1], weaponMixer);
 
             if (rareCheck <= rarePercentage[0]) {
-                return _mintRare(_msgSender());
+                return _mintRare(_owner);
             } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
             }
         } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
         }
 
     }
+
+    function _mintRare(address _owner) internal returns (uint256) {
+        require(rareCurrentSupply < maxWeaponSupply[0]);
+
+        uint256 mixer = _mixer(_owner);
+        
+        uint256 typeIterations = 0;
+
+        while(currentRareWeaponSupply[mixer] == maxRareWeaponSupply[mixer]) {
+            require(typeIterations < weaponType.length);
+            mixer += 1;
+            if(mixer > weaponType.length) {
+                mixer -= weaponType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations >= weaponType.length) {
+            return (0);
+        }
+
+        uint256[2] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareWeaponSupply[mixer] + 1];
+
+        _createWeapon(
+            _currentSupplyInfo,
+            0,
+            mixer,
+            0,
+            rareBaseStat[0],
+            rareBaseStat[1]
+        );
+
+        rareCurrentSupply += 1;
+        currentRareWeaponSupply[mixer] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+    }
+
+    function _mintCommon(address _owner) internal returns (uint256) {
+        require(commonCurrentSupply < maxWeaponSupply[1]);
+
+        uint256 mixer = _mixer(_owner);
+        
+        uint256 typeIterations = 0;
+
+        while(currentCommonWeaponSupply[mixer] == maxCommonWeaponSupply[mixer]) {
+            require(typeIterations < weaponType.length);
+            mixer += 1;
+            if(mixer > weaponType.length) {
+                mixer -= weaponType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations >= weaponType.length) {
+            return (0);
+        }
+
+        uint256[2] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonWeaponSupply[mixer] + 1];
+
+        _createWeapon(
+            _currentSupplyInfo,
+            1,
+            mixer,
+            0,
+            commonBaseStat[0],
+            commonBaseStat[1]
+        );
+
+        commonCurrentSupply += 1;
+        currentCommonWeaponSupply[mixer] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+
+    }
+
+    /* NFT drop logic functions */
 
     function dropSpecific(
         address _owner,
@@ -1994,8 +2100,7 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
             currentSpecificUpgradeWeaponSupply[_weaponStatus][_weaponType] += 1;
         }
 
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
+        _safeMint(_owner);
     }
 
     function dropRandom(
@@ -2018,49 +2123,13 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
 
     }
 
-    function _mintRare(address _owner) internal returns (uint256) {
-        require(rareCurrentSupply < maxWeaponSupply[0]);
-
-        uint256 mixer = _mixer(_owner);
-        
-        uint256 typeIterations = 0;
-
-        while(currentRareWeaponSupply[mixer] == maxRareWeaponSupply[mixer]) {
-            require(typeIterations < weaponType.length);
-            mixer += 1;
-            if(mixer > weaponType.length) {
-                mixer -= weaponType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations >= weaponType.length) {
-            return (0);
-        }
-
-        uint256[2] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareWeaponSupply[mixer] + 1];
-
-        _createWeapon(
-            _currentSupplyInfo,
-            0,
-            mixer,
-            0,
-            rareBaseStat[0],
-            rareBaseStat[1]
-        );
-
-        rareCurrentSupply += 1;
-        currentRareWeaponSupply[mixer] += 1;
-
-        uint256 tokenID = _tokenIdCounter.current();
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
-
-        return (tokenID);
+    function mobDropRare(
+        address _owner
+    ) external whenNotPaused authorized returns (uint256) {
+        return _mintRareDrop(_owner);
     }
 
-    function _mintRareDrop(address _owner) internal {
+    function _mintRareDrop(address _owner) internal returns (uint256) {
         require(rareCurrentSupply < maxWeaponSupply[0]);
 
         uint256 mixer = _mixer(_owner);
@@ -2081,54 +2150,13 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         rareCurrentSupply += 1;
         currentRareWeaponSupply[mixer] += 1;
 
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
-    }
-
-    function _mintCommon(address _owner) internal returns (uint256) {
-        require(commonCurrentSupply < maxWeaponSupply[1]);
-
-        uint256 mixer = _mixer(_owner);
-        
-        uint256 typeIterations = 0;
-
-        while(currentCommonWeaponSupply[mixer] == maxCommonWeaponSupply[mixer]) {
-            require(typeIterations < weaponType.length);
-            mixer += 1;
-            if(mixer > weaponType.length) {
-                mixer -= weaponType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations >= weaponType.length) {
-            return (0);
-        }
-
-        uint256[2] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonWeaponSupply[mixer] + 1];
-
-        _createWeapon(
-            _currentSupplyInfo,
-            1,
-            mixer,
-            0,
-            commonBaseStat[0],
-            commonBaseStat[1]
-        );
-
-        commonCurrentSupply += 1;
-        currentCommonWeaponSupply[mixer] += 1;
-
         uint256 tokenID = _tokenIdCounter.current();
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
+        _safeMint(_owner);
 
-        return (tokenID);
-
+        return tokenID;
     }
 
-    function _mintCommonDrop(address _owner) internal {
+    function _mintCommonDrop(address _owner) internal returns (uint256) {
         require(commonCurrentSupply < maxWeaponSupply[1]);
 
         uint256 mixer = _mixer(_owner);
@@ -2149,49 +2177,13 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
         commonCurrentSupply += 1;
         currentCommonWeaponSupply[mixer] += 1;
 
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return tokenID;
     }
 
-    function _mixer(address _owner) internal view returns (uint256){
-        uint256 userAddress = uint256(uint160(_owner));
-        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
-
-        uint256 _weaponType = randomizer.sliceNumber(random, weaponType.length, 1, weaponType.length);
-
-        return _weaponType;
-    }
-
-    function _createWeapon(
-        uint256[2] memory _currentSupplyInfo,
-        uint256 _weaponStatus,
-        uint256 _weaponType,
-        uint256 _weaponLevel,
-        uint256 _weaponEndurance,
-        uint256 _baseAttack
-    ) internal {
-        Weapon memory _apocWeapon = Weapon({
-            tokenID: _tokenIdCounter.current(),
-            weaponIndex: _currentSupplyInfo,
-            weaponEquip: false,
-            weaponStatus: _weaponStatus,
-            weaponType: _weaponType,
-            weaponLevel: _weaponLevel,
-            weaponEndurance: _weaponEndurance,
-            baseAttack: _baseAttack
-        });
-        
-        apocWeapon.push(_apocWeapon);
-    }
-
-    function _safeMint(address to, string memory uri) internal {
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        _safeMint(to, tokenId);
-        _setTokenURI(tokenId, uri);
-
-        emit MintNewWeapon(to, tokenId);
-    }
+    /* NFT ERC logic functions */
 
     function _beforeTokenTransfer(address from, address to, uint256 tokenId)
         internal
@@ -2202,19 +2194,6 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, ERC721URIStorage, Pausabl
     }
 
     // The following functions are overrides required by Solidity.
-
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
-        super._burn(tokenId);
-    }
-
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
-        return super.tokenURI(tokenId);
-    }
 
     function supportsInterface(bytes4 interfaceId)
         public
