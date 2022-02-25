@@ -1679,14 +1679,29 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         commonWandEndurance[_wandLevel - 1] = _commonWandEndurance;
     }
     
+    function getCommonWandEndurance(uint256 _wandLevel) public view returns (uint256) {
+        require(_wandLevel != 0 && _wandLevel < commonWandEndurance.length);
+        return commonWandEndurance[_wandLevel - 1];
+    }
+    
     function updateUpgradeWandEndurance(uint256 _wandLevel, uint256 _upgradeWandEndurance) public authorized {
         require(_wandLevel != 0 && _wandLevel < upgradeWandEndurance.length && _upgradeWandEndurance > 0);
         upgradeWandEndurance[_wandLevel - 1] = _upgradeWandEndurance;
     }
     
+    function getUpgradeWandEndurance(uint256 _wandLevel) public view returns (uint256) {
+        require(_wandLevel != 0 && _wandLevel < upgradeWandEndurance.length);
+        return upgradeWandEndurance[_wandLevel - 1];
+    }
+    
     function updateRareWandEndurance(uint256 _wandLevel, uint256 _rareWandEndurance) public authorized {
         require(_wandLevel != 0 && _wandLevel < rareWandEndurance.length && _rareWandEndurance > 0);
         rareWandEndurance[_wandLevel - 1] = _rareWandEndurance;
+    }
+    
+    function getRareWandEndurance(uint256 _wandLevel) public view returns (uint256) {
+        require(_wandLevel != 0 && _wandLevel < rareWandEndurance.length);
+        return rareWandEndurance[_wandLevel - 1];
     }
     
     function updateWandAttack(uint256 _wandLevel, uint256 _wandAttack) public authorized {
@@ -1709,14 +1724,26 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         commonBaseStat = [_baseEndurance, _baseAttack];
     }
 
+    function getCommonBaseStat() public view returns (uint256[2] memory) {
+        return commonBaseStat;
+    }
+
     function setUpgradeBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
         require(_baseEndurance > 0 && _baseAttack > 0);
         upgradeBaseStat = [_baseEndurance, _baseAttack];
     }
 
+    function getUpgradeBaseStat() public view returns (uint256[2] memory) {
+        return upgradeBaseStat;
+    }
+
     function setRareBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
         require(_baseEndurance > 0 && _baseAttack > 0);
         rareBaseStat = [_baseEndurance, _baseAttack];
+    }
+
+    function getRareBaseStat() public view returns (uint256[2] memory) {
+        return rareBaseStat;
     }
 
     function addWandStatus(uint256[] memory _statusID) public authorized {
