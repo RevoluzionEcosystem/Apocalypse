@@ -1380,7 +1380,7 @@ abstract contract ERC721Burnable is Context, ERC721 {
 }
 
 
-/** APOCALYPSE **/
+/** APOCALYPSE WEAPON **/
 
 contract ApocalypseRandomizer {
 
