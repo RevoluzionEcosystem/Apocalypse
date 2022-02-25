@@ -5925,13 +5925,12 @@ contract ApocalypseMediator is Pausable, Auth {
 
     /* Check functions */
 
-    function checkPrice(uint256 _priceBUSD, IERC20Extended _token) internal view returns (uint256){
-        uint256 exact = _priceBUSD.div(10**rewardToken.decimals());
+    function checkPrice(uint256 _priceBUSD, IERC20Extended _token) public view returns (uint256){
         address[] memory path = new address[](3);
-        path[0] = address(rewardToken);
+        path[0] = address(_token);
         path[1] = router.WETH();
-        path[2] = address(_token);
-        return router.getAmountsOut(_priceBUSD, path)[2].div(exact);
+        path[2] = address(rewardToken);
+        return router.getAmountsIn(_priceBUSD, path)[0];
     }
 
     function getXPGain(uint256 _tokenID) internal view returns(uint256) {
@@ -5952,7 +5951,7 @@ contract ApocalypseMediator is Pausable, Auth {
         require (_nextStatus <= maxUpgradeStatus);
 
         uint256 amount = checkPrice(characterUpgradeBUSDPrice, upgradeCharacterToken);
-        upgradeCharacterToken.transfer(address(upgradeCharacterToken), amount);
+        upgradeCharacterToken.transferFrom(_msgSender(), address(upgradeCharacterToken), amount);
 
         return apocCharacter.upgradeCharacter(_msgSender(), _tokenID1, _tokenID2, _nextStatus);
     }
@@ -5967,7 +5966,7 @@ contract ApocalypseMediator is Pausable, Auth {
         uint256 fee = gain.div(5);
         
         uint256 amount = checkPrice(fee, upgradeCharacterToken);
-        upgradeCharacterToken.transfer(address(upgradeCharacterToken), amount);
+        upgradeCharacterToken.transferFrom(_msgSender(), address(upgradeCharacterToken), amount);
 
         apocCharacter.levelUp(_tokenID);
     }
@@ -5975,21 +5974,21 @@ contract ApocalypseMediator is Pausable, Auth {
     function levelUpWeapon(uint256 _tokenID) external {
         require(_msgSender() == apocWeapon.ownerOf(_tokenID));
         uint256 amount = checkPrice(weaponLevelUpBUSDPrice, levelUpWeaponToken);
-        levelUpWeaponToken.transfer(address(levelUpWeaponToken), amount);
+        levelUpWeaponToken.transferFrom(_msgSender(), address(levelUpWeaponToken), amount);
         apocWeapon.levelUp(_tokenID);
     }
 
     function levelUpWand(uint256 _tokenID) external {
         require(_msgSender() == apocWand.ownerOf(_tokenID));
         uint256 amount = checkPrice(wandLevelUpBUSDPrice, levelUpWandToken);
-        levelUpWandToken.transfer(address(levelUpWandToken), amount);
+        levelUpWandToken.transferFrom(_msgSender(), address(levelUpWandToken), amount);
         apocWand.levelUp(_tokenID);
     }
 
     function levelUpShield(uint256 _tokenID) external {
         require(_msgSender() == apocShield.ownerOf(_tokenID));
         uint256 amount = checkPrice(shieldLevelUpBUSDPrice, levelUpShieldToken);
-        levelUpShieldToken.transfer(address(levelUpShieldToken), amount);
+        levelUpShieldToken.transferFrom(_msgSender(), address(levelUpShieldToken), amount);
         apocShield.levelUp(_tokenID);
     }
 
@@ -5997,25 +5996,25 @@ contract ApocalypseMediator is Pausable, Auth {
 
     function mintCharacter() external returns (uint256) {
         uint256 amount = checkPrice(characterBUSDPrice, mintCharacterToken);
-        mintCharacterToken.transfer(address(mintCharacterToken), amount);
+        mintCharacterToken.transferFrom(_msgSender(), address(mintCharacterToken), amount);
         return apocCharacter.mintNewCharacter(_msgSender());
     }
 
     function mintWand() external returns (uint256) {
         uint256 amount = checkPrice(wandBUSDPrice, mintWandToken);
-        mintWandToken.transfer(address(mintWandToken), amount);
+        mintWandToken.transferFrom(_msgSender(), address(mintWandToken), amount);
         return apocWand.mintNewWand(_msgSender());
     }
 
     function mintWeapon() external returns (uint256) {
         uint256 amount = checkPrice(weaponBUSDPrice, mintWeaponToken);
-        mintWeaponToken.transfer(address(mintWeaponToken), amount);
+        mintWeaponToken.transferFrom(_msgSender(), address(mintWeaponToken), amount);
         return apocWeapon.mintNewWeapon(_msgSender());
     }
 
     function mintShield() external returns (uint256) {
         uint256 amount = checkPrice(shieldBUSDPrice, mintShieldToken);
-        mintShieldToken.transfer(address(mintShieldToken), amount);
+        mintShieldToken.transferFrom(_msgSender(), address(mintShieldToken), amount);
         return apocShield.mintNewShield(_msgSender());
     }
 
@@ -6024,7 +6023,7 @@ contract ApocalypseMediator is Pausable, Auth {
     function repairWeapon(uint256 _tokenID) external {
         require(_msgSender() == apocWeapon.ownerOf(_tokenID));
         uint256 amount = checkPrice(weaponRepairBUSDPrice, repairWeaponToken);
-        repairWeaponToken.transfer(address(repairWeaponToken), amount);
+        repairWeaponToken.transferFrom(_msgSender(), address(repairWeaponToken), amount);
 
         uint256 status = apocWeapon.getWeaponStatus(_tokenID);
         uint256 level = apocWeapon.getWeaponLevel(_tokenID);
@@ -6051,7 +6050,7 @@ contract ApocalypseMediator is Pausable, Auth {
     function repairWand(uint256 _tokenID) external {
         require(_msgSender() == apocWand.ownerOf(_tokenID));
         uint256 amount = checkPrice(wandRepairBUSDPrice, repairWandToken);
-        repairWandToken.transfer(address(repairWandToken), amount);
+        repairWandToken.transferFrom(_msgSender(), address(repairWandToken), amount);
         
         uint256 status = apocWand.getWandStatus(_tokenID);
         uint256 level = apocWand.getWandLevel(_tokenID);
@@ -6078,7 +6077,7 @@ contract ApocalypseMediator is Pausable, Auth {
     function repairShield(uint256 _tokenID) external {
         require(_msgSender() == apocShield.ownerOf(_tokenID));
         uint256 amount = checkPrice(shieldRepairBUSDPrice, repairShieldToken);
-        repairShieldToken.transfer(address(repairShieldToken), amount);
+        repairShieldToken.transferFrom(_msgSender(), address(repairShieldToken), amount);
         
         uint256 status = apocShield.getShieldStatus(_tokenID);
         uint256 level = apocShield.getShieldLevel(_tokenID);
