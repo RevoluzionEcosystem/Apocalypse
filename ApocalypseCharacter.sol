@@ -342,6 +342,10 @@ abstract contract Context {
     function _msgData() internal view virtual returns (bytes calldata) {
         return msg.data;
     }
+
+    function _msgValue() internal view virtual returns (uint256) {
+        return msg.value;
+    }
 }
 
 /**
@@ -513,7 +517,6 @@ abstract contract Pausable is Context {
         emit Unpaused(_msgSender());
     }
 }
-
 
 /** ERC STANDARD **/
 
@@ -1377,7 +1380,7 @@ abstract contract ERC721Burnable is Context, ERC721 {
 }
 
 
-/** APOCALYPSE CHARACTER **/
+/** APOCALYPSE **/
 
 contract ApocalypseRandomizer {
 
@@ -1523,13 +1526,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         upgradePercentage = [5, 2];
         rarePercentage = [5, 4];
 
-        addDef = 3;
-        maxAngelModifier = 5;
-        maxLevel = 50;
-        baseHP = 1000;
-        upgradeBaseHP = 1500;
-        baseNextXP = 1000;
-        maxUpgradeStatus = 2;
+        setDefaultInfo(50, 1000, 1500, 1000, 3, 2);
 
         charStatus = [0,1,2];
         charType = [1,2];
@@ -1585,13 +1582,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
 
     /** FUNCTION **/
 
-    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
-        randomizer = _randomizer;
-    }
-
-    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
-        return randomizer;
-    }
+    /* General functions */
 
     function pause() public whenNotPaused authorized {
         _pause();
@@ -1617,6 +1608,18 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         return URI;
     }
 
+    /* Randomizer functions */
+
+    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
+        randomizer = _randomizer;
+    }
+
+    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
+        return randomizer;
+    }
+
+    /* Supply functions */
+
     function addSpecificMaxCharSupply(
         uint256 _charStatus,
         uint256 _charType,
@@ -1641,6 +1644,8 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
 
         emit AddCharacterSupply(_maxCharSupply);
     }
+
+    /* Default stats functions */
 
     function setUpgradePercentage(uint256 _upgradeNumerator, uint256 _upgradePower) public authorized {
         require(_upgradeNumerator > 0 && _upgradePower > 0);
@@ -1695,6 +1700,8 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         }
     }
 
+    /* Character attributes functions */
+
     function updateCharacterEquip(uint256 _tokenID, bool _equip) external whenNotPaused authorized {
         require(apocChar[_tokenID].charEquip != _equip);
         apocChar[_tokenID].charEquip = _equip;
@@ -1748,9 +1755,10 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         }
     }
 
-    function updateNextXP(uint256 _tokenID, uint256 _charLevel) external whenNotPaused authorized {
+    function updateNextXP(uint256 _tokenID) external whenNotPaused authorized {
         require(getCharXP(_tokenID) == getCharNextXP(_tokenID));
-        apocChar[_tokenID].charNextXP = baseNextXP * _charLevel;
+        uint256 nextLevel = getCharLevel(_tokenID) + 1;
+        apocChar[_tokenID].charNextXP = baseNextXP * nextLevel;
     }
 
     function increaseAngelModifier(uint256 _tokenID, uint256 _angelModifier) external whenNotPaused authorized {
@@ -1835,6 +1843,58 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         return imgURI;
     }
 
+    /* NFT general logic functions */
+
+    function _mixer(address _owner, uint256 _offset) internal view returns (uint256[3] memory){
+        uint256 userAddress = uint256(uint160(_owner));
+        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
+
+        uint256 _charType = randomizer.sliceNumber(random, charType.length, 1, charType.length);
+        uint256 _charSkill = randomizer.sliceNumber(random, charSkill.length, 1, charSkill.length);
+        uint256 _addDef = randomizer.sliceNumber(random, addDef, 1, _offset);
+
+        return [_charType, _charSkill, _addDef];
+    }
+
+    function _createCharacter(
+        uint256[3] memory _currentSupplyInfo,
+        uint256 _charStatus,
+        uint256 _charType,
+        uint256 _charSkill,
+        uint256 _charLevel,
+        uint256 _baseHP,
+        uint256 _baseXP,
+        uint256 _baseAttack,
+        uint256 _baseDefence        
+    ) internal {
+        Character memory _apocChar = Character({
+            charIndex: _currentSupplyInfo,
+            charEquip: false,
+            charStatus: _charStatus,
+            charType: _charType,
+            charSkill: _charSkill,
+            charLevel: _charLevel,
+            charHP: _baseHP,
+            charXP: 0,
+            charNextXP: _baseXP,
+            baseAttack: _baseAttack,
+            baseDefence: _baseDefence,
+            angelModifier: 0
+        });
+        
+        apocChar.push(_apocChar);
+    }
+
+    function _safeMint(address to) internal {
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(to, tokenId);
+
+        emit MintNewCharacter(to, tokenId);
+    }
+
+    /* NFT upgrade logic functions */
+
     function _burnUpgrade(uint256 _tokenID) internal {
         _burn(_tokenID);
 
@@ -1910,14 +1970,16 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
 
     }
 
-    function mintNewCharacter() external whenNotPaused authorized returns (uint256){
+    /* NFT mint logic functions */
+
+    function mintNewCharacter(address _owner) public whenNotPaused authorized returns (uint256){
 
         require(totalSupply() < totalMaxSupply);
 
         if (commonCurrentSupply == maxCharSupply[1] && rareCurrentSupply < maxCharSupply[0]) {
-            return _mintRare(_msgSender());
+            return _mintRare(_owner);
         } else if (commonCurrentSupply < maxCharSupply[1] && rareCurrentSupply < maxCharSupply[0]) {
-            uint256 userAddress = uint256(uint160(_msgSender()));
+            uint256 userAddress = uint256(uint160(_owner));
             uint256 charMixer = charStatus.length + charType.length + charSkill.length;
             uint256 targetBlock = block.number + charMixer;
             uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, targetBlock);
@@ -1925,15 +1987,138 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
             uint256 rareCheck = randomizer.sliceNumber(random, 10, rarePercentage[1], charMixer);
 
             if (rareCheck <= rarePercentage[0]) {
-                return _mintRare(_msgSender());
+                return _mintRare(_owner);
             } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
             }
         } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
         }
 
     }
+
+    function _mintRare(address _owner) internal returns (uint256) {
+        require(rareCurrentSupply < maxCharSupply[0]);
+
+        uint256[3] memory mixer = _mixer(_owner, rareCurrentSupply/addDef);
+        
+        uint256 typeIterations = 0;
+        uint256 skillIterations = 0;
+
+        while(currentRareCharSupply[mixer[0]] == maxRareCharSupply[mixer[0]]) {
+            require(typeIterations < charType.length);
+            mixer[0] += 1;
+            if(mixer[0] > charType.length) {
+                mixer[0] -= charType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations == charType.length) {
+            return (0);
+        }
+
+        while(currentSpecificRareCharSupply[mixer[0]][mixer[1]] == maxSpecificRareCharSupply[mixer[0]][mixer[1]]) {
+            require(skillIterations < charSkill.length);
+            mixer[1] += 1;
+            if(mixer[1] > charSkill.length) {
+                mixer[1] -= charSkill.length;
+            }
+
+            skillIterations += 1;
+        }
+        
+        if(skillIterations == charSkill.length) {
+            return (0);
+        }
+
+        uint256[3] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareCharSupply[mixer[0]] + 1, currentSpecificRareCharSupply[mixer[0]][mixer[1]] + 1];
+
+        _createCharacter(
+            _currentSupplyInfo,
+            0,
+            mixer[0],
+            mixer[1],
+            1,
+            baseHP,
+            baseNextXP,
+            rareBaseStat[0],
+            rareBaseStat[1] + mixer[2]        
+        );
+
+        rareCurrentSupply += 1;
+        currentRareCharSupply[mixer[0]] += 1;
+        currentSpecificRareCharSupply[mixer[0]][mixer[1]] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+    }
+
+    function _mintCommon(address _owner) internal returns (uint256) {
+        require(commonCurrentSupply < maxCharSupply[1]);
+
+        uint256[3] memory mixer = _mixer(_owner, commonCurrentSupply/addDef);
+        
+        uint256 typeIterations = 0;
+        uint256 skillIterations = 0;
+
+        while(currentCommonCharSupply[mixer[0]] == maxCommonCharSupply[mixer[0]]) {
+            require(typeIterations < charType.length);
+            mixer[0] += 1;
+            if(mixer[0] > charType.length) {
+                mixer[0] -= charType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations == charType.length) {
+            return (0);
+        }
+
+        while(currentSpecificCommonCharSupply[mixer[0]][mixer[1]] == maxSpecificCommonCharSupply[mixer[0]][mixer[1]]) {
+            require(skillIterations < charSkill.length);
+            mixer[1] += 1;
+            if(mixer[1] > charSkill.length) {
+                mixer[1] -= charSkill.length;
+            }
+
+            skillIterations += 1;
+        }
+        
+        if (skillIterations == charSkill.length) {
+            return (0);
+        }
+
+        uint256[3] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonCharSupply[mixer[0]] + 1, currentSpecificCommonCharSupply[mixer[0]][mixer[1]] + 1];
+
+        _createCharacter(
+            _currentSupplyInfo,
+            1,
+            mixer[0],
+            mixer[1],
+            1,
+            baseHP,
+            baseNextXP,
+            commonBaseStat[0],
+            commonBaseStat[1] + mixer[2]        
+        );
+
+        commonCurrentSupply += 1;
+        currentCommonCharSupply[mixer[0]] += 1;
+        currentSpecificCommonCharSupply[mixer[0]][mixer[1]] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+
+    }
+
+    /* NFT drop logic functions */
 
     function dropSpecific(
         address _owner,
@@ -2027,66 +2212,6 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
 
     }
 
-    function _mintRare(address _owner) internal returns (uint256) {
-        require(rareCurrentSupply < maxCharSupply[0]);
-
-        uint256[3] memory mixer = _mixer(_owner, rareCurrentSupply/addDef);
-        
-        uint256 typeIterations = 0;
-        uint256 skillIterations = 0;
-
-        while(currentRareCharSupply[mixer[0]] == maxRareCharSupply[mixer[0]]) {
-            require(typeIterations < charType.length);
-            mixer[0] += 1;
-            if(mixer[0] > charType.length) {
-                mixer[0] -= charType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations == charType.length) {
-            return (0);
-        }
-
-        while(currentSpecificRareCharSupply[mixer[0]][mixer[1]] == maxSpecificRareCharSupply[mixer[0]][mixer[1]]) {
-            require(skillIterations < charSkill.length);
-            mixer[1] += 1;
-            if(mixer[1] > charSkill.length) {
-                mixer[1] -= charSkill.length;
-            }
-
-            skillIterations += 1;
-        }
-        
-        if(skillIterations == charSkill.length) {
-            return (0);
-        }
-
-        uint256[3] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareCharSupply[mixer[0]] + 1, currentSpecificRareCharSupply[mixer[0]][mixer[1]] + 1];
-
-        _createCharacter(
-            _currentSupplyInfo,
-            0,
-            mixer[0],
-            mixer[1],
-            1,
-            baseHP,
-            baseNextXP,
-            rareBaseStat[0],
-            rareBaseStat[1] + mixer[2]        
-        );
-
-        rareCurrentSupply += 1;
-        currentRareCharSupply[mixer[0]] += 1;
-        currentSpecificRareCharSupply[mixer[0]][mixer[1]] += 1;
-
-        uint256 tokenID = _tokenIdCounter.current();
-        _safeMint(_owner);
-
-        return (tokenID);
-    }
-
     function _mintRareDrop(address _owner) internal {
         require(rareCurrentSupply < maxCharSupply[0]);
 
@@ -2116,67 +2241,6 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         _safeMint(_owner);
 
         emit AirdropCharacter(_owner, tokenID);
-
-    }
-
-    function _mintCommon(address _owner) internal returns (uint256) {
-        require(commonCurrentSupply < maxCharSupply[1]);
-
-        uint256[3] memory mixer = _mixer(_owner, commonCurrentSupply/addDef);
-        
-        uint256 typeIterations = 0;
-        uint256 skillIterations = 0;
-
-        while(currentCommonCharSupply[mixer[0]] == maxCommonCharSupply[mixer[0]]) {
-            require(typeIterations < charType.length);
-            mixer[0] += 1;
-            if(mixer[0] > charType.length) {
-                mixer[0] -= charType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations == charType.length) {
-            return (0);
-        }
-
-        while(currentSpecificCommonCharSupply[mixer[0]][mixer[1]] == maxSpecificCommonCharSupply[mixer[0]][mixer[1]]) {
-            require(skillIterations < charSkill.length);
-            mixer[1] += 1;
-            if(mixer[1] > charSkill.length) {
-                mixer[1] -= charSkill.length;
-            }
-
-            skillIterations += 1;
-        }
-        
-        if (skillIterations == charSkill.length) {
-            return (0);
-        }
-
-        uint256[3] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonCharSupply[mixer[0]] + 1, currentSpecificCommonCharSupply[mixer[0]][mixer[1]] + 1];
-
-        _createCharacter(
-            _currentSupplyInfo,
-            1,
-            mixer[0],
-            mixer[1],
-            1,
-            baseHP,
-            baseNextXP,
-            commonBaseStat[0],
-            commonBaseStat[1] + mixer[2]        
-        );
-
-        commonCurrentSupply += 1;
-        currentCommonCharSupply[mixer[0]] += 1;
-        currentSpecificCommonCharSupply[mixer[0]][mixer[1]] += 1;
-
-        uint256 tokenID = _tokenIdCounter.current();
-        _safeMint(_owner);
-
-        return (tokenID);
 
     }
 
@@ -2212,53 +2276,7 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
 
     }
 
-    function _mixer(address _owner, uint256 _offset) internal view returns (uint256[3] memory){
-        uint256 userAddress = uint256(uint160(_owner));
-        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
-
-        uint256 _charType = randomizer.sliceNumber(random, charType.length, 1, charType.length);
-        uint256 _charSkill = randomizer.sliceNumber(random, charSkill.length, 1, charSkill.length);
-        uint256 _addDef = randomizer.sliceNumber(random, addDef, 1, _offset);
-
-        return [_charType, _charSkill, _addDef];
-    }
-
-    function _createCharacter(
-        uint256[3] memory _currentSupplyInfo,
-        uint256 _charStatus,
-        uint256 _charType,
-        uint256 _charSkill,
-        uint256 _charLevel,
-        uint256 _baseHP,
-        uint256 _baseXP,
-        uint256 _baseAttack,
-        uint256 _baseDefence        
-    ) internal {
-        Character memory _apocChar = Character({
-            charIndex: _currentSupplyInfo,
-            charEquip: false,
-            charStatus: _charStatus,
-            charType: _charType,
-            charSkill: _charSkill,
-            charLevel: _charLevel,
-            charHP: _baseHP,
-            charXP: 0,
-            charNextXP: _baseXP,
-            baseAttack: _baseAttack,
-            baseDefence: _baseDefence,
-            angelModifier: 0
-        });
-        
-        apocChar.push(_apocChar);
-    }
-
-    function _safeMint(address to) internal {
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        _safeMint(to, tokenId);
-
-        emit MintNewCharacter(to, tokenId);
-    }
+    /* NFT ERC logic functions */
 
     function _beforeTokenTransfer(address from, address to, uint256 tokenId)
         internal
