@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.11;
+pragma solidity ^0.8.12;
 
 
 /** LIBRARY **/
@@ -342,6 +342,10 @@ abstract contract Context {
     function _msgData() internal view virtual returns (bytes calldata) {
         return msg.data;
     }
+
+    function _msgValue() internal view virtual returns (uint256) {
+        return msg.value;
+    }
 }
 
 /**
@@ -513,7 +517,6 @@ abstract contract Pausable is Context {
         emit Unpaused(_msgSender());
     }
 }
-
 
 /** ERC STANDARD **/
 
@@ -1358,67 +1361,6 @@ abstract contract ERC721Enumerable is ERC721, IERC721Enumerable {
 }
 
 /**
- * @dev ERC721 token with storage based token URI management.
- */
-abstract contract ERC721URIStorage is ERC721 {
-    using Strings for uint256;
-
-    // Optional mapping for token URIs
-    mapping(uint256 => string) private _tokenURIs;
-
-    /**
-     * @dev See {IERC721Metadata-tokenURI}.
-     */
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-        require(_exists(tokenId), "ERC721URIStorage: URI query for nonexistent token");
-
-        string memory _tokenURI = _tokenURIs[tokenId];
-        string memory base = _baseURI();
-
-        // If there is no base URI, return the token URI.
-        if (bytes(base).length == 0) {
-            return _tokenURI;
-        }
-        // If both are set, concatenate the baseURI and tokenURI (via abi.encodePacked).
-        if (bytes(_tokenURI).length > 0) {
-            return string(abi.encodePacked(base, _tokenURI));
-        }
-
-        return super.tokenURI(tokenId);
-    }
-
-    /**
-     * @dev Sets `_tokenURI` as the tokenURI of `tokenId`.
-     *
-     * Requirements:
-     *
-     * - `tokenId` must exist.
-     */
-    function _setTokenURI(uint256 tokenId, string memory _tokenURI) internal virtual {
-        require(_exists(tokenId), "ERC721URIStorage: URI set of nonexistent token");
-        _tokenURIs[tokenId] = _tokenURI;
-    }
-
-    /**
-     * @dev Destroys `tokenId`.
-     * The approval is cleared when the token is burned.
-     *
-     * Requirements:
-     *
-     * - `tokenId` must exist.
-     *
-     * Emits a {Transfer} event.
-     */
-    function _burn(uint256 tokenId) internal virtual override {
-        super._burn(tokenId);
-
-        if (bytes(_tokenURIs[tokenId]).length != 0) {
-            delete _tokenURIs[tokenId];
-        }
-    }
-}
-
-/**
  * @title ERC721 Burnable Token
  * @dev ERC721 Token that can be irreversibly burned (destroyed).
  */
@@ -1494,7 +1436,7 @@ contract ApocalypseRandomizer {
 
 }
 
-contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Auth, ERC721Burnable {
+contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burnable {
     
 
     /** LIBRARY **/
@@ -1554,6 +1496,7 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
     mapping(uint256 => uint256) currentRareWandSupply;
     mapping(uint256 => mapping(uint256 => uint256)) public currentSpecificUpgradeWandSupply;
     
+
     /** CONSTRUCTOR **/
     constructor(
         string memory _name,
@@ -1582,17 +1525,17 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
         
         rarePercentage = [5, 4];
 
-        addSpecificMaxWandSupply(0, 1, 2); // 2 rare energy
-        addSpecificMaxWandSupply(0, 2, 2); // 2 rare lightning
-        addSpecificMaxWandSupply(0, 3, 2); // 2 rare earth
-        addSpecificMaxWandSupply(0, 4, 2); // 2 rare ice
-        addSpecificMaxWandSupply(0, 5, 2); // 2 rare fire
+        addSpecificMaxWandSupply(0, 1, 2); // 2 rare fencing
+        addSpecificMaxWandSupply(0, 2, 2); // 2 rare axe
+        addSpecificMaxWandSupply(0, 3, 2); // 2 rare bow
+        addSpecificMaxWandSupply(0, 4, 2); // 2 rare sword
+        addSpecificMaxWandSupply(0, 5, 2); // 2 rare hammer
 
-        addSpecificMaxWandSupply(1, 1, 100000); // 100,000 energy
-        addSpecificMaxWandSupply(1, 2, 100000); // 100,000 lightning
-        addSpecificMaxWandSupply(1, 3, 100000); // 100,000 earth
-        addSpecificMaxWandSupply(1, 4, 100000); // 100,000 ice
-        addSpecificMaxWandSupply(1, 5, 100000); // 100,000 fire
+        addSpecificMaxWandSupply(1, 1, 100000); // 100,000 fencing
+        addSpecificMaxWandSupply(1, 2, 100000); // 100,000 axe
+        addSpecificMaxWandSupply(1, 3, 100000); // 100,000 bow
+        addSpecificMaxWandSupply(1, 4, 100000); // 100,000 sword
+        addSpecificMaxWandSupply(1, 5, 100000); // 100,000 hammer
 
         _createWand(
             [uint256(0),uint256(0)],
@@ -1603,8 +1546,7 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
             commonBaseStat[1]
         );
 
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_msgSender(), _tokenURI);
+        _safeMint(_msgSender());
 
     }
 
@@ -1617,13 +1559,7 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
 
     /** FUNCTION **/
 
-    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
-        randomizer = _randomizer;
-    }
-
-    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
-        return randomizer;
-    }
+    /* General functions */
 
     function pause() public whenNotPaused authorized {
         _pause();
@@ -1649,6 +1585,18 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
         return URI;
     }
 
+    /* Randomizer functions */
+
+    function setApocalypseRandomizer(ApocalypseRandomizer _randomizer) public onlyOwner {
+        randomizer = _randomizer;
+    }
+
+    function ApocRandomizer() public view returns (ApocalypseRandomizer) {
+        return randomizer;
+    }
+
+    /* Supply functions */
+
     function addSpecificMaxWandSupply(
         uint256 _wandStatus,
         uint256 _wandType,
@@ -1672,6 +1620,8 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
         emit AddWandSupply(_maxWandSupply);
     }
 
+    /* Default stats functions */
+
     function setUpgradePercentage(uint256 _upgradeNumerator, uint256 _upgradePower) public authorized {
         require(_upgradeNumerator > 0 && _upgradePower > 0);
         upgradePercentage = [_upgradeNumerator, _upgradePower];
@@ -1682,10 +1632,7 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
         rarePercentage = [_rareNumerator, _rarePower];
     }
 
-    function setDefaultInfo(
-        uint256 _maxLevel,
-        uint256 _maxUpgradeStatus
-    ) public authorized {
+    function setDefaultInfo(uint256 _maxLevel, uint256 _maxUpgradeStatus) public authorized {
         require(_maxLevel > 0);
         maxLevel = _maxLevel;
         maxUpgradeStatus = _maxUpgradeStatus;
@@ -1784,6 +1731,10 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
         }
     }
 
+    /* Wand attributes functions */
+
+    // Setter
+
     function updateWandEquip(uint256 _tokenID, bool _equip) external whenNotPaused authorized {
         require(apocWand[_tokenID].wandEquip != _equip);
         apocWand[_tokenID].wandEquip = _equip;
@@ -1835,8 +1786,34 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
         }
     }
 
+    // Getter
+
     function getWandIndex(uint256 _tokenID) public view returns(uint256[2] memory) {
         return apocWand[_tokenID].wandIndex;
+    }
+
+    function getWandEquip(uint256 _tokenID) public view returns(bool) {
+        return apocWand[_tokenID].wandEquip;
+    }
+
+    function getWandStatus(uint256 _tokenID) public view returns(uint256) {
+        return apocWand[_tokenID].wandStatus;
+    }
+
+    function getWandType(uint256 _tokenID) public view returns(uint256) {
+        return apocWand[_tokenID].wandType;
+    }
+
+    function getWandLevel(uint256 _tokenID) public view returns(uint256) {
+        return apocWand[_tokenID].wandLevel;
+    }
+
+    function getWandEndurance(uint256 _tokenID) public view returns(uint256) {
+        return apocWand[_tokenID].wandEndurance;
+    }
+
+    function getBaseAttack(uint256 _tokenID) public view returns(uint256) {
+        return apocWand[_tokenID].baseAttack;
     }
 
     function getWandImage(uint256 _tokenID) public view returns (string memory) {
@@ -1853,6 +1830,49 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
 
         return imgURI;
     }
+
+    /* NFT general logic functions */
+
+    function _mixer(address _owner) internal view returns (uint256){
+        uint256 userAddress = uint256(uint160(_owner));
+        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
+
+        uint256 _wandType = randomizer.sliceNumber(random, wandType.length, 1, wandType.length);
+
+        return _wandType;
+    }
+
+    function _createWand(
+        uint256[2] memory _currentSupplyInfo,
+        uint256 _wandStatus,
+        uint256 _wandType,
+        uint256 _wandLevel,
+        uint256 _wandEndurance,
+        uint256 _baseAttack
+    ) internal {
+        Wand memory _apocWand = Wand({
+            tokenID: _tokenIdCounter.current(),
+            wandIndex: _currentSupplyInfo,
+            wandEquip: false,
+            wandStatus: _wandStatus,
+            wandType: _wandType,
+            wandLevel: _wandLevel,
+            wandEndurance: _wandEndurance,
+            baseAttack: _baseAttack
+        });
+        
+        apocWand.push(_apocWand);
+    }
+
+    function _safeMint(address to) internal {
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(to, tokenId);
+
+        emit MintNewWand(to, tokenId);
+    }
+
+    /* NFT upgrade logic functions */
 
     function _burnUpgrade(uint256 _tokenID) internal {
         _burn(_tokenID);
@@ -1901,8 +1921,7 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
             currentSpecificUpgradeWandSupply[_nextStatus][_wandType] += 1;
 
             uint256 tokenID = _tokenIdCounter.current();
-            string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-            _safeMint(_owner, _tokenURI);
+            _safeMint(_owner);
 
             _burnUpgrade(_tokenID1);
             _burnUpgrade(_tokenID2);
@@ -1917,14 +1936,16 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
 
     }
 
-    function mintNewWand() external whenNotPaused authorized returns (uint256){
+    /* NFT mint logic functions */
+
+    function mintNewWand(address _owner) external whenNotPaused authorized returns (uint256){
 
         require(totalSupply() < totalMaxSupply);
 
         if (commonCurrentSupply == maxWandSupply[1] && rareCurrentSupply < maxWandSupply[0]) {
-            return _mintRare(_msgSender());
+            return _mintRare(_owner);
         } else if (commonCurrentSupply < maxWandSupply[1] && rareCurrentSupply < maxWandSupply[0]) {
-            uint256 userAddress = uint256(uint160(_msgSender()));
+            uint256 userAddress = uint256(uint160(_owner));
             uint256 wandMixer = wandStatus.length + wandType.length;
             uint256 targetBlock = block.number + wandMixer;
             uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, targetBlock);
@@ -1932,15 +1953,100 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
             uint256 rareCheck = randomizer.sliceNumber(random, 10, rarePercentage[1], wandMixer);
 
             if (rareCheck <= rarePercentage[0]) {
-                return _mintRare(_msgSender());
+                return _mintRare(_owner);
             } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
             }
         } else {
-                return _mintCommon(_msgSender());
+                return _mintCommon(_owner);
         }
 
     }
+
+    function _mintRare(address _owner) internal returns (uint256) {
+        require(rareCurrentSupply < maxWandSupply[0]);
+
+        uint256 mixer = _mixer(_owner);
+        
+        uint256 typeIterations = 0;
+
+        while(currentRareWandSupply[mixer] == maxRareWandSupply[mixer]) {
+            require(typeIterations < wandType.length);
+            mixer += 1;
+            if(mixer > wandType.length) {
+                mixer -= wandType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations >= wandType.length) {
+            return (0);
+        }
+
+        uint256[2] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareWandSupply[mixer] + 1];
+
+        _createWand(
+            _currentSupplyInfo,
+            0,
+            mixer,
+            0,
+            rareBaseStat[0],
+            rareBaseStat[1]
+        );
+
+        rareCurrentSupply += 1;
+        currentRareWandSupply[mixer] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+    }
+
+    function _mintCommon(address _owner) internal returns (uint256) {
+        require(commonCurrentSupply < maxWandSupply[1]);
+
+        uint256 mixer = _mixer(_owner);
+        
+        uint256 typeIterations = 0;
+
+        while(currentCommonWandSupply[mixer] == maxCommonWandSupply[mixer]) {
+            require(typeIterations < wandType.length);
+            mixer += 1;
+            if(mixer > wandType.length) {
+                mixer -= wandType.length;
+            }
+
+            typeIterations += 1;
+        }
+        
+        if (typeIterations >= wandType.length) {
+            return (0);
+        }
+
+        uint256[2] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonWandSupply[mixer] + 1];
+
+        _createWand(
+            _currentSupplyInfo,
+            1,
+            mixer,
+            0,
+            commonBaseStat[0],
+            commonBaseStat[1]
+        );
+
+        commonCurrentSupply += 1;
+        currentCommonWandSupply[mixer] += 1;
+
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return (tokenID);
+
+    }
+
+    /* NFT drop logic functions */
 
     function dropSpecific(
         address _owner,
@@ -1994,8 +2100,7 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
             currentSpecificUpgradeWandSupply[_wandStatus][_wandType] += 1;
         }
 
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
+        _safeMint(_owner);
     }
 
     function dropRandom(
@@ -2018,49 +2123,13 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
 
     }
 
-    function _mintRare(address _owner) internal returns (uint256) {
-        require(rareCurrentSupply < maxWandSupply[0]);
-
-        uint256 mixer = _mixer(_owner);
-        
-        uint256 typeIterations = 0;
-
-        while(currentRareWandSupply[mixer] == maxRareWandSupply[mixer]) {
-            require(typeIterations < wandType.length);
-            mixer += 1;
-            if(mixer > wandType.length) {
-                mixer -= wandType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations >= wandType.length) {
-            return (0);
-        }
-
-        uint256[2] memory _currentSupplyInfo = [rareCurrentSupply + 1, currentRareWandSupply[mixer] + 1];
-
-        _createWand(
-            _currentSupplyInfo,
-            0,
-            mixer,
-            0,
-            rareBaseStat[0],
-            rareBaseStat[1]
-        );
-
-        rareCurrentSupply += 1;
-        currentRareWandSupply[mixer] += 1;
-
-        uint256 tokenID = _tokenIdCounter.current();
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
-
-        return (tokenID);
+    function mobDropRare(
+        address _owner
+    ) external whenNotPaused authorized returns (uint256) {
+        return _mintRareDrop(_owner);
     }
 
-    function _mintRareDrop(address _owner) internal {
+    function _mintRareDrop(address _owner) internal returns (uint256) {
         require(rareCurrentSupply < maxWandSupply[0]);
 
         uint256 mixer = _mixer(_owner);
@@ -2081,54 +2150,13 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
         rareCurrentSupply += 1;
         currentRareWandSupply[mixer] += 1;
 
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
-    }
-
-    function _mintCommon(address _owner) internal returns (uint256) {
-        require(commonCurrentSupply < maxWandSupply[1]);
-
-        uint256 mixer = _mixer(_owner);
-        
-        uint256 typeIterations = 0;
-
-        while(currentCommonWandSupply[mixer] == maxCommonWandSupply[mixer]) {
-            require(typeIterations < wandType.length);
-            mixer += 1;
-            if(mixer > wandType.length) {
-                mixer -= wandType.length;
-            }
-
-            typeIterations += 1;
-        }
-        
-        if (typeIterations >= wandType.length) {
-            return (0);
-        }
-
-        uint256[2] memory _currentSupplyInfo = [commonCurrentSupply + 1, currentCommonWandSupply[mixer] + 1];
-
-        _createWand(
-            _currentSupplyInfo,
-            1,
-            mixer,
-            0,
-            commonBaseStat[0],
-            commonBaseStat[1]
-        );
-
-        commonCurrentSupply += 1;
-        currentCommonWandSupply[mixer] += 1;
-
         uint256 tokenID = _tokenIdCounter.current();
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
+        _safeMint(_owner);
 
-        return (tokenID);
-
+        return tokenID;
     }
 
-    function _mintCommonDrop(address _owner) internal {
+    function _mintCommonDrop(address _owner) internal returns (uint256) {
         require(commonCurrentSupply < maxWandSupply[1]);
 
         uint256 mixer = _mixer(_owner);
@@ -2149,49 +2177,13 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
         commonCurrentSupply += 1;
         currentCommonWandSupply[mixer] += 1;
 
-        string memory _tokenURI = Strings.toString(_tokenIdCounter.current());
-        _safeMint(_owner, _tokenURI);
+        uint256 tokenID = _tokenIdCounter.current();
+        _safeMint(_owner);
+
+        return tokenID;
     }
 
-    function _mixer(address _owner) internal view returns (uint256){
-        uint256 userAddress = uint256(uint160(_owner));
-        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
-
-        uint256 _wandType = randomizer.sliceNumber(random, wandType.length, 1, wandType.length);
-
-        return _wandType;
-    }
-
-    function _createWand(
-        uint256[2] memory _currentSupplyInfo,
-        uint256 _wandStatus,
-        uint256 _wandType,
-        uint256 _wandLevel,
-        uint256 _wandEndurance,
-        uint256 _baseAttack
-    ) internal {
-        Wand memory _apocWand = Wand({
-            tokenID: _tokenIdCounter.current(),
-            wandIndex: _currentSupplyInfo,
-            wandEquip: false,
-            wandStatus: _wandStatus,
-            wandType: _wandType,
-            wandLevel: _wandLevel,
-            wandEndurance: _wandEndurance,
-            baseAttack: _baseAttack
-        });
-        
-        apocWand.push(_apocWand);
-    }
-
-    function _safeMint(address to, string memory uri) internal {
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        _safeMint(to, tokenId);
-        _setTokenURI(tokenId, uri);
-
-        emit MintNewWand(to, tokenId);
-    }
+    /* NFT ERC logic functions */
 
     function _beforeTokenTransfer(address from, address to, uint256 tokenId)
         internal
@@ -2202,19 +2194,6 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable,
     }
 
     // The following functions are overrides required by Solidity.
-
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
-        super._burn(tokenId);
-    }
-
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
-        return super.tokenURI(tokenId);
-    }
 
     function supportsInterface(bytes4 interfaceId)
         public
