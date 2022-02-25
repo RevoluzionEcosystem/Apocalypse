@@ -1525,17 +1525,17 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         
         rarePercentage = [5, 4];
 
-        addSpecificMaxWandSupply(0, 1, 2); // 2 rare fencing
-        addSpecificMaxWandSupply(0, 2, 2); // 2 rare axe
-        addSpecificMaxWandSupply(0, 3, 2); // 2 rare bow
-        addSpecificMaxWandSupply(0, 4, 2); // 2 rare sword
-        addSpecificMaxWandSupply(0, 5, 2); // 2 rare hammer
+        addSpecificMaxWandSupply(0, 1, 2); // 2 rare energy
+        addSpecificMaxWandSupply(0, 2, 2); // 2 rare lightning
+        addSpecificMaxWandSupply(0, 3, 2); // 2 rare earth
+        addSpecificMaxWandSupply(0, 4, 2); // 2 rare ice
+        addSpecificMaxWandSupply(0, 5, 2); // 2 rare fire
 
-        addSpecificMaxWandSupply(1, 1, 100000); // 100,000 fencing
-        addSpecificMaxWandSupply(1, 2, 100000); // 100,000 axe
-        addSpecificMaxWandSupply(1, 3, 100000); // 100,000 bow
-        addSpecificMaxWandSupply(1, 4, 100000); // 100,000 sword
-        addSpecificMaxWandSupply(1, 5, 100000); // 100,000 hammer
+        addSpecificMaxWandSupply(1, 1, 100000); // 100,000 energy
+        addSpecificMaxWandSupply(1, 2, 100000); // 100,000 lightning
+        addSpecificMaxWandSupply(1, 3, 100000); // 100,000 earth
+        addSpecificMaxWandSupply(1, 4, 100000); // 100,000 ice
+        addSpecificMaxWandSupply(1, 5, 100000); // 100,000 fire
 
         _createWand(
             [uint256(0),uint256(0)],
