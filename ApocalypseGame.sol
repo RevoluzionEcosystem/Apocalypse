@@ -2184,11 +2184,11 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         }
     }
 
-    function getBaseHP() public returns (uint256) {
+    function getBaseHP() public view returns (uint256) {
         return baseHP;
     }
     
-    function getUpgradeBaseHP() public returns (uint256) {
+    function getUpgradeBaseHP() public view returns (uint256) {
         return upgradeBaseHP;
     }
 
