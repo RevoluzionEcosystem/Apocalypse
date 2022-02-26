@@ -5640,13 +5640,13 @@ contract ApocalypseGame is Pausable, Auth {
 
         if (
             apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID1) <= 1 &&
-            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID1) <= apocCharacter.getBaseHP() &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID1) < apocCharacter.getBaseHP() &&
             block.timestamp > durationHPRecover.add(charSlot[_msgSender()].lastHPUpdate1)
         ) {
             recoverHP(1);
         } else if (
             apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID1) > 1 &&
-            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID1) <= apocCharacter.getUpgradeBaseHP() &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID1) < apocCharacter.getUpgradeBaseHP() &&
             block.timestamp > durationHPRecover.add(charSlot[_msgSender()].lastHPUpdate1)
         ) {
             recoverHP(1);
@@ -5695,13 +5695,13 @@ contract ApocalypseGame is Pausable, Auth {
 
         if (
             apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID2) <= 1 &&
-            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID2) <= apocCharacter.getBaseHP() &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID2) < apocCharacter.getBaseHP() &&
             block.timestamp > durationHPRecover.add(charSlot[_msgSender()].lastHPUpdate2)
         ) {
             recoverHP(2);
         } else if (
             apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID2) > 1 &&
-            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID2) <= apocCharacter.getUpgradeBaseHP() &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID2) < apocCharacter.getUpgradeBaseHP() &&
             block.timestamp > durationHPRecover.add(charSlot[_msgSender()].lastHPUpdate2)
         ) {
             recoverHP(2);
