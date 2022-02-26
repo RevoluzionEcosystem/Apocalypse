@@ -2184,6 +2184,14 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         }
     }
 
+    function getBaseHP() public returns (uint256) {
+        return baseHP;
+    }
+    
+    function getUpgradeBaseHP() public returns (uint256) {
+        return upgradeBaseHP;
+    }
+
     /* Character attributes functions */
 
     // Setter
@@ -5630,7 +5638,17 @@ contract ApocalypseGame is Pausable, Auth {
 
     function fightSlot1() public whenNotPaused returns (bool, uint256){
 
-        if (block.timestamp > durationHPRecover.add(charSlot[_msgSender()].lastHPUpdate1)) {
+        if (
+            apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID1) <= 1 &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID1) <= apocCharacter.getBaseHP() &&
+            block.timestamp > durationHPRecover.add(charSlot[_msgSender()].lastHPUpdate1)
+        ) {
+            recoverHP(1);
+        } else if (
+            apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID1) > 1 &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID1) <= apocCharacter.getUpgradeBaseHP() &&
+            block.timestamp > durationHPRecover.add(charSlot[_msgSender()].lastHPUpdate1)
+        ) {
             recoverHP(1);
         }
 
@@ -5675,7 +5693,17 @@ contract ApocalypseGame is Pausable, Auth {
 
     function fightSlot2() public whenNotPaused returns (bool, uint256){
 
-        if (block.timestamp > durationHPRecover.add(charSlot[_msgSender()].lastHPUpdate2)) {
+        if (
+            apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID2) <= 1 &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID2) <= apocCharacter.getBaseHP() &&
+            block.timestamp > durationHPRecover.add(charSlot[_msgSender()].lastHPUpdate2)
+        ) {
+            recoverHP(2);
+        } else if (
+            apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID2) > 1 &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID2) <= apocCharacter.getUpgradeBaseHP() &&
+            block.timestamp > durationHPRecover.add(charSlot[_msgSender()].lastHPUpdate2)
+        ) {
             recoverHP(2);
         }
 
