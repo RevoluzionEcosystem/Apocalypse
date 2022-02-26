@@ -5994,25 +5994,25 @@ contract ApocalypseMediator is Pausable, Auth {
 
     /* Pay and mint NFT functions */
 
-    function mintCharacter() external returns (uint256) whenNotPaused {
+    function mintCharacter() external whenNotPaused returns (uint256) {
         uint256 amount = checkPrice(characterBUSDPrice, mintCharacterToken);
         mintCharacterToken.transferFrom(_msgSender(), address(mintCharacterToken), amount);
         return apocCharacter.mintNewCharacter(_msgSender());
     }
 
-    function mintWand() external returns (uint256) whenNotPaused {
+    function mintWand() external whenNotPaused returns (uint256) {
         uint256 amount = checkPrice(wandBUSDPrice, mintWandToken);
         mintWandToken.transferFrom(_msgSender(), address(mintWandToken), amount);
         return apocWand.mintNewWand(_msgSender());
     }
 
-    function mintWeapon() external returns (uint256) whenNotPaused {
+    function mintWeapon() external whenNotPaused returns (uint256) {
         uint256 amount = checkPrice(weaponBUSDPrice, mintWeaponToken);
         mintWeaponToken.transferFrom(_msgSender(), address(mintWeaponToken), amount);
         return apocWeapon.mintNewWeapon(_msgSender());
     }
 
-    function mintShield() external returns (uint256) whenNotPaused  {
+    function mintShield() external whenNotPaused returns (uint256)  {
         uint256 amount = checkPrice(shieldBUSDPrice, mintShieldToken);
         mintShieldToken.transferFrom(_msgSender(), address(mintShieldToken), amount);
         return apocShield.mintNewShield(_msgSender());
