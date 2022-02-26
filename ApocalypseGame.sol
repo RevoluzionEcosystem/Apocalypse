@@ -5447,7 +5447,7 @@ contract ApocalypseGame is Pausable, Auth {
 
     /* Equip functions */
 
-    function equipCharSlot1(uint256 _tokenID) external {
+    function equipCharSlot1(uint256 _tokenID) external whenNotPaused {
         require(
             apocCharacter.getCharEquip(_tokenID) != true && 
             apocCharacter.ownerOf(_tokenID) == _msgSender()
@@ -5459,7 +5459,7 @@ contract ApocalypseGame is Pausable, Auth {
         increaseSupply();
     }
 
-    function unequipCharSlot1() public {
+    function unequipCharSlot1() public whenNotPaused {
         increaseSupply();
         recoverHP(1);
         apocCharacter.updateCharacterEquip(charSlot[_msgSender()].tokenID1, false);
@@ -5468,7 +5468,7 @@ contract ApocalypseGame is Pausable, Auth {
         unequipShieldSlot1();
     }
 
-    function equipWeaponWandSlot1(uint256 _tokenID) external {
+    function equipWeaponWandSlot1(uint256 _tokenID) external whenNotPaused {
         if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 1) {
             require(
                 apocWeapon.getWeaponEndurance(_tokenID) > 0 && 
@@ -5492,7 +5492,7 @@ contract ApocalypseGame is Pausable, Auth {
         increaseSupply();
     }
 
-    function unequipWeaponWandSlot1() public {
+    function unequipWeaponWandSlot1() public whenNotPaused {
         if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 1) {
             apocWeapon.updateWeaponEquip(charSlot[_msgSender()].weaponID1, false);
             charSlot[_msgSender()].weaponID1 = 0;
@@ -5504,7 +5504,7 @@ contract ApocalypseGame is Pausable, Auth {
         increaseSupply();
     }
 
-    function equipShieldSlot1(uint256 _tokenID) external {
+    function equipShieldSlot1(uint256 _tokenID) external whenNotPaused {
         require(apocShield.getShieldEndurance(_tokenID) > 0);
         if (apocShield.getShieldStatus(_tokenID) == 0) {
             require(
@@ -5526,13 +5526,13 @@ contract ApocalypseGame is Pausable, Auth {
         increaseSupply();
     }
 
-    function unequipShieldSlot1() public {
+    function unequipShieldSlot1() public whenNotPaused {
         increaseSupply();
         apocShield.updateShieldEquip(charSlot[_msgSender()].shieldID1, false);
         charSlot[_msgSender()].shieldID1 = 0;
     }
 
-    function equipCharSlot2(uint256 _tokenID) external {
+    function equipCharSlot2(uint256 _tokenID) external whenNotPaused {
         require(apocCharacter.getCharEquip(_tokenID) != true && apocCharacter.ownerOf(_tokenID) == _msgSender());
         charSlot[_msgSender()].tokenID2 = _tokenID;
         apocCharacter.updateCharacterEquip(_tokenID, true);
@@ -5541,7 +5541,7 @@ contract ApocalypseGame is Pausable, Auth {
         increaseSupply();
     }
 
-    function unequipCharSlot2() public {
+    function unequipCharSlot2() public whenNotPaused {
         increaseSupply();
         recoverHP(2);
         apocCharacter.updateCharacterEquip(charSlot[_msgSender()].tokenID2, false);
@@ -5550,7 +5550,7 @@ contract ApocalypseGame is Pausable, Auth {
         unequipShieldSlot2();
     }
 
-    function equipWeaponWandSlot2(uint256 _tokenID) external {
+    function equipWeaponWandSlot2(uint256 _tokenID) external whenNotPaused {
         if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 1) {
             require(
                 apocWeapon.getWeaponEndurance(_tokenID) > 0 && 
@@ -5574,7 +5574,7 @@ contract ApocalypseGame is Pausable, Auth {
         increaseSupply();
     }
 
-    function unequipWeaponWandSlot2() public {
+    function unequipWeaponWandSlot2() public whenNotPaused {
         if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 1) {
             apocWeapon.updateWeaponEquip(charSlot[_msgSender()].weaponID2, false);
             charSlot[_msgSender()].weaponID2 = 0;
@@ -5586,7 +5586,7 @@ contract ApocalypseGame is Pausable, Auth {
         increaseSupply();
     }
 
-    function equipShieldSlot2(uint256 _tokenID) external {
+    function equipShieldSlot2(uint256 _tokenID) external whenNotPaused {
         require(apocShield.getShieldEndurance(_tokenID) > 0);
         if (apocShield.getShieldStatus(_tokenID) == 0) {
             require(
@@ -5608,7 +5608,7 @@ contract ApocalypseGame is Pausable, Auth {
         increaseSupply();
     }
 
-    function unequipShieldSlot2() public {
+    function unequipShieldSlot2() public whenNotPaused {
         increaseSupply();
         apocShield.updateShieldEquip(charSlot[_msgSender()].shieldID2, false);
         charSlot[_msgSender()].shieldID2 = 0;
@@ -5939,7 +5939,7 @@ contract ApocalypseMediator is Pausable, Auth {
 
     /* Pay and level up or upgrades functions */
 
-    function upgradeCharacter(uint256 _tokenID1, uint256 _tokenID2) external returns (bool, uint256) {
+    function upgradeCharacter(uint256 _tokenID1, uint256 _tokenID2) external whenNotPaused returns (bool, uint256) {
         require(_msgSender() == apocCharacter.ownerOf(_tokenID1) && _msgSender() == apocCharacter.ownerOf(_tokenID2));
         require(
             apocCharacter.getCharSkill(_tokenID1) == apocCharacter.getCharSkill(_tokenID2) &&
@@ -5956,7 +5956,7 @@ contract ApocalypseMediator is Pausable, Auth {
         return apocCharacter.upgradeCharacter(_msgSender(), _tokenID1, _tokenID2, _nextStatus);
     }
 
-    function levelUpCharacter(uint256 _tokenID) external {
+    function levelUpCharacter(uint256 _tokenID) external whenNotPaused {
         require(_msgSender() == apocCharacter.ownerOf(_tokenID));
         uint256 rounds = uint256(1000).div(getXPGain(_tokenID));
         if (rounds.mul(getXPGain(_tokenID)) < 1000) {
@@ -5971,21 +5971,21 @@ contract ApocalypseMediator is Pausable, Auth {
         apocCharacter.levelUp(_tokenID);
     }
 
-    function levelUpWeapon(uint256 _tokenID) external {
+    function levelUpWeapon(uint256 _tokenID) external whenNotPaused {
         require(_msgSender() == apocWeapon.ownerOf(_tokenID));
         uint256 amount = checkPrice(weaponLevelUpBUSDPrice, levelUpWeaponToken);
         levelUpWeaponToken.transferFrom(_msgSender(), address(levelUpWeaponToken), amount);
         apocWeapon.levelUp(_tokenID);
     }
 
-    function levelUpWand(uint256 _tokenID) external {
+    function levelUpWand(uint256 _tokenID) external whenNotPaused {
         require(_msgSender() == apocWand.ownerOf(_tokenID));
         uint256 amount = checkPrice(wandLevelUpBUSDPrice, levelUpWandToken);
         levelUpWandToken.transferFrom(_msgSender(), address(levelUpWandToken), amount);
         apocWand.levelUp(_tokenID);
     }
 
-    function levelUpShield(uint256 _tokenID) external {
+    function levelUpShield(uint256 _tokenID) external whenNotPaused {
         require(_msgSender() == apocShield.ownerOf(_tokenID));
         uint256 amount = checkPrice(shieldLevelUpBUSDPrice, levelUpShieldToken);
         levelUpShieldToken.transferFrom(_msgSender(), address(levelUpShieldToken), amount);
@@ -5994,25 +5994,25 @@ contract ApocalypseMediator is Pausable, Auth {
 
     /* Pay and mint NFT functions */
 
-    function mintCharacter() external returns (uint256) {
+    function mintCharacter() external returns (uint256) whenNotPaused {
         uint256 amount = checkPrice(characterBUSDPrice, mintCharacterToken);
         mintCharacterToken.transferFrom(_msgSender(), address(mintCharacterToken), amount);
         return apocCharacter.mintNewCharacter(_msgSender());
     }
 
-    function mintWand() external returns (uint256) {
+    function mintWand() external returns (uint256) whenNotPaused {
         uint256 amount = checkPrice(wandBUSDPrice, mintWandToken);
         mintWandToken.transferFrom(_msgSender(), address(mintWandToken), amount);
         return apocWand.mintNewWand(_msgSender());
     }
 
-    function mintWeapon() external returns (uint256) {
+    function mintWeapon() external returns (uint256) whenNotPaused {
         uint256 amount = checkPrice(weaponBUSDPrice, mintWeaponToken);
         mintWeaponToken.transferFrom(_msgSender(), address(mintWeaponToken), amount);
         return apocWeapon.mintNewWeapon(_msgSender());
     }
 
-    function mintShield() external returns (uint256) {
+    function mintShield() external returns (uint256) whenNotPaused  {
         uint256 amount = checkPrice(shieldBUSDPrice, mintShieldToken);
         mintShieldToken.transferFrom(_msgSender(), address(mintShieldToken), amount);
         return apocShield.mintNewShield(_msgSender());
@@ -6020,7 +6020,7 @@ contract ApocalypseMediator is Pausable, Auth {
 
     /* Pay and mint NFT functions */
 
-    function repairWeapon(uint256 _tokenID) external {
+    function repairWeapon(uint256 _tokenID) external whenNotPaused {
         require(_msgSender() == apocWeapon.ownerOf(_tokenID));
         uint256 amount = checkPrice(weaponRepairBUSDPrice, repairWeaponToken);
         repairWeaponToken.transferFrom(_msgSender(), address(repairWeaponToken), amount);
@@ -6047,7 +6047,7 @@ contract ApocalypseMediator is Pausable, Auth {
         apocWeapon.recoverEndurance(_tokenID, _recoverEndurance);
     }
 
-    function repairWand(uint256 _tokenID) external {
+    function repairWand(uint256 _tokenID) external whenNotPaused {
         require(_msgSender() == apocWand.ownerOf(_tokenID));
         uint256 amount = checkPrice(wandRepairBUSDPrice, repairWandToken);
         repairWandToken.transferFrom(_msgSender(), address(repairWandToken), amount);
@@ -6074,7 +6074,7 @@ contract ApocalypseMediator is Pausable, Auth {
         apocWand.recoverEndurance(_tokenID, _recoverEndurance);
     }
 
-    function repairShield(uint256 _tokenID) external {
+    function repairShield(uint256 _tokenID) external whenNotPaused {
         require(_msgSender() == apocShield.ownerOf(_tokenID));
         uint256 amount = checkPrice(shieldRepairBUSDPrice, repairShieldToken);
         repairShieldToken.transferFrom(_msgSender(), address(repairShieldToken), amount);
