@@ -5241,6 +5241,7 @@ contract ApocalypseGame is Pausable, Auth {
 
     constructor(
         IERC20Extended _rewardToken,
+        ApocalypseRandomizer _randomizer,
         ApocalypseCharacter _apocCharacter,
         ApocalypseWeapon _apocWeapon,
         ApocalypseWand _apocWand,
@@ -5249,6 +5250,8 @@ contract ApocalypseGame is Pausable, Auth {
     ) {
         rewardToken = _rewardToken;
         
+        randomizer = _randomizer;
+
         apocCharacter = _apocCharacter;
         apocWeapon = _apocWeapon;
         apocWand = _apocWand;
@@ -5826,14 +5829,12 @@ contract ApocalypseGame is Pausable, Auth {
             );
             apocWand.reduceEndurance(_charWeaponID, enduranceDeduction);
         }
-        
-        uint256 userAddress = uint256(uint160(_msgSender()));
-        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
-        uint256 randomN = randomizer.sliceNumber(random, 10, 4, apocCharacter.getCharLevel(_charTokenID));
-        
-        uint256 drop = checkDrop(0, 0);
 
-        bool fightStatus = checkFight(_charTokenID, _charWeaponID, randomN);
+        uint256[3] memory rand = mixer(_charTokenID);
+
+        uint256 drop = checkDrop(rand[2], rand[1]);
+
+        bool fightStatus = checkFight(_charTokenID, _charWeaponID, rand[0]);
 
         updateCharacter(fightStatus, charSlot[_msgSender()].tokenID2, _charShieldID);
 
