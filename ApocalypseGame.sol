@@ -5782,7 +5782,7 @@ contract ApocalypseGame is Pausable, Auth {
 
         uint256[] memory rand = mixer(_charTokenID);
 
-        uint256 drop = checkDrop(rand[2], rand[1]);
+        //uint256 drop = checkDrop(rand[2], rand[1]);
 
         bool fightStatus = checkFight(_charTokenID, _charWeaponID, rand[0]);
 
@@ -5790,7 +5790,7 @@ contract ApocalypseGame is Pausable, Auth {
 
         increaseSupply();
 
-        return (fightStatus, drop);
+        return (fightStatus, 0);
 
     }
 
@@ -5830,17 +5830,22 @@ contract ApocalypseGame is Pausable, Auth {
             apocWand.reduceEndurance(_charWeaponID, enduranceDeduction);
         }
 
-        uint256[] memory rand = mixer(_charTokenID);
+        //uint256[] memory rand = mixer(_charTokenID);
 
-        uint256 drop = checkDrop(rand[2], rand[1]);
+        
+        uint256 userAddress = uint256(uint160(_msgSender()));
+        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
+        uint256 randomN = randomizer.sliceNumber(random, 10, 4, apocCharacter.getCharLevel(_charTokenID));
+        
+        //uint256 drop = checkDrop(rand[2], rand[1]);
 
-        bool fightStatus = checkFight(_charTokenID, _charWeaponID, rand[0]);
+        bool fightStatus = checkFight(_charTokenID, _charWeaponID, randomN);
 
         updateCharacter(fightStatus, charSlot[_msgSender()].tokenID2, _charShieldID);
 
         increaseSupply();
 
-        return (fightStatus, drop);
+        return (fightStatus, 0);
 
     }
 
