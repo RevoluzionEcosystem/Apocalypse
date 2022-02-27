@@ -1435,7 +1435,6 @@ contract ApocalypseRandomizer {
     }
 
 }
-
 contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burnable {
     
 
@@ -1703,6 +1702,14 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
         for(uint256 i = 0; i < _skillID.length; i++){
             charSkill.push(_skillID[i]);
         }
+    }
+
+    function getBaseHP() public view returns (uint256) {
+        return baseHP;
+    }
+    
+    function getUpgradeBaseHP() public view returns (uint256) {
+        return upgradeBaseHP;
     }
 
     /* Character attributes functions */
