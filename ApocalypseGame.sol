@@ -5386,6 +5386,7 @@ contract ApocalypseGame is Pausable, Auth {
     }
 
     function recoverHP(uint256 _slot) internal {
+
         if (_slot == 1) {
             uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate1);
             uint256 recover = duration.div(durationHPRecover).mul(hpRecovery);
@@ -5554,8 +5555,6 @@ contract ApocalypseGame is Pausable, Auth {
         checkHPRecovery(1);
         apocCharacter.updateCharacterEquip(charSlot[_msgSender()].tokenID1, false);
         charSlot[_msgSender()].tokenID1 = 0;
-        unequipWeaponWandSlot1();
-        unequipShieldSlot1();
     }
 
     function equipWeaponWandSlot1(uint256 _tokenID) external whenNotPaused {
@@ -5650,8 +5649,6 @@ contract ApocalypseGame is Pausable, Auth {
         checkHPRecovery(2);
         apocCharacter.updateCharacterEquip(charSlot[_msgSender()].tokenID2, false);
         charSlot[_msgSender()].tokenID2 = 0;
-        unequipWeaponWandSlot2();
-        unequipShieldSlot2();
     }
 
     function equipWeaponWandSlot2(uint256 _tokenID) external whenNotPaused {
