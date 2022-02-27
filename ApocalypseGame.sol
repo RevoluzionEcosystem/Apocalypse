@@ -5413,7 +5413,7 @@ contract ApocalypseGame is Pausable, Auth {
         return (apocCharacter.getCharLevel(_tokenID).sub(1)).mul(2).add(xpGainBase);
     }
 
-    function mixer(uint256 _charTokenID) internal view returns (uint256[3] memory) {
+    function mixer(uint256 _charTokenID) internal view returns (uint256[] memory) {
         uint256 userAddress = uint256(uint160(_msgSender()));
         uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
         uint256 randomN = randomizer.sliceNumber(random, 10, 4, apocCharacter.getCharLevel(_charTokenID));
@@ -5422,7 +5422,13 @@ contract ApocalypseGame is Pausable, Auth {
         uint256 dropT = randomizer.sliceNumber(drop, 3, 1, dropPercentage);
         uint256 dropN = randomizer.sliceNumber(drop, 10, 4, dropPercentage);
 
-        return [randomN, dropT, dropN];
+        uint256[] memory _mixer;
+
+        _mixer[0] = randomN;
+        _mixer[1] = dropT;
+        _mixer[2] = dropN;
+
+        return _mixer;
     }
 
     function checkDrop(uint256 dropN, uint256 dropT) internal returns (uint256){
@@ -5774,13 +5780,13 @@ contract ApocalypseGame is Pausable, Auth {
             apocWand.reduceEndurance(_charWeaponID, enduranceDeduction);
         }
 
-        uint256[3] memory rand = mixer(_charTokenID);
+        uint256[] memory rand = mixer(_charTokenID);
 
         uint256 drop = checkDrop(rand[2], rand[1]);
 
         bool fightStatus = checkFight(_charTokenID, _charWeaponID, rand[0]);
 
-        //updateCharacter(fightStatus, charSlot[_msgSender()].tokenID1, _charShieldID);
+        updateCharacter(fightStatus, charSlot[_msgSender()].tokenID1, _charShieldID);
 
         increaseSupply();
 
@@ -5824,9 +5830,9 @@ contract ApocalypseGame is Pausable, Auth {
             apocWand.reduceEndurance(_charWeaponID, enduranceDeduction);
         }
 
-        uint256[3] memory rand = mixer(_charTokenID);
+        uint256[] memory rand = mixer(_charTokenID);
 
-        //uint256 drop = checkDrop(rand[2], rand[1]);
+        uint256 drop = checkDrop(rand[2], rand[1]);
 
         bool fightStatus = checkFight(_charTokenID, _charWeaponID, rand[0]);
 
@@ -5834,7 +5840,7 @@ contract ApocalypseGame is Pausable, Auth {
 
         increaseSupply();
 
-        return (fightStatus, 0);
+        return (fightStatus, drop);
 
     }
 
