@@ -5780,7 +5780,7 @@ contract ApocalypseGame is Pausable, Auth {
 
         bool fightStatus = checkFight(_charTokenID, _charWeaponID, rand[0]);
 
-        updateCharacter(fightStatus, charSlot[_msgSender()].tokenID1, _charShieldID);
+        //updateCharacter(fightStatus, charSlot[_msgSender()].tokenID1, _charShieldID);
 
         increaseSupply();
 
@@ -5826,7 +5826,7 @@ contract ApocalypseGame is Pausable, Auth {
 
         uint256[3] memory rand = mixer(_charTokenID);
 
-        uint256 drop = checkDrop(rand[2], rand[1]);
+        //uint256 drop = checkDrop(rand[2], rand[1]);
 
         bool fightStatus = checkFight(_charTokenID, _charWeaponID, rand[0]);
 
@@ -5834,7 +5834,7 @@ contract ApocalypseGame is Pausable, Auth {
 
         increaseSupply();
 
-        return (fightStatus, drop);
+        return (fightStatus, 0);
 
     }
 
