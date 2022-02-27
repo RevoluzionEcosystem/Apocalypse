@@ -5453,15 +5453,57 @@ contract ApocalypseGame is Pausable, Auth {
         }
     }
 
+    function checkHPRecovery(uint256 _slot) internal {
+        if (
+            apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID1) <= 1 &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID1) < apocCharacter.getBaseHP() &&
+            block.timestamp > durationHPRecover.add(charSlot[_msgSender()].lastHPUpdate1) &&
+            _slot == 1
+        ) {
+            recoverHP(1);
+        } else if (
+            apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID1) > 1 &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID1) < apocCharacter.getUpgradeBaseHP() &&
+            block.timestamp > durationHPRecover.add(charSlot[_msgSender()].lastHPUpdate1) &&
+            _slot == 1
+        ) {
+            recoverHP(1);
+        } else if (
+            apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID2) <= 1 &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID2) < apocCharacter.getBaseHP() &&
+            block.timestamp > durationHPRecover.add(charSlot[_msgSender()].lastHPUpdate2) &&
+            _slot == 2
+        ) {
+            recoverHP(2);
+        } else if (
+            apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID2) > 1 &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID2) < apocCharacter.getUpgradeBaseHP() &&
+            block.timestamp > durationHPRecover.add(charSlot[_msgSender()].lastHPUpdate2) &&
+            _slot == 2
+        ) {
+            recoverHP(2);
+        }
+    }
+
     /* Equip functions */
 
     function equipCharSlot1(uint256 _tokenID) external whenNotPaused {
-        require(
-            apocCharacter.getCharEquip(_tokenID) != true && 
-            apocCharacter.ownerOf(_tokenID) == _msgSender()
-        );
-        charSlot[_msgSender()].tokenID1 = _tokenID;
+        if(_msgSender() != owner()) {
+            require(_tokenID > 0);
+        }
+        require(apocCharacter.ownerOf(_tokenID) == _msgSender());
+        
+        if(
+            apocCharacter.getCharEquip(_tokenID) == true && 
+            charSlot[_msgSender()].tokenID1 != _tokenID &&
+            charSlot[_msgSender()].tokenID2 != _tokenID
+        ) {
+            apocCharacter.updateCharacterEquip(_tokenID, false);
+        }
+
         apocCharacter.updateCharacterEquip(_tokenID, true);
+
+        charSlot[_msgSender()].tokenID1 = _tokenID;
         charSlot[_msgSender()].lastHPUpdate1 = block.timestamp;
 
         increaseSupply();
@@ -5469,7 +5511,7 @@ contract ApocalypseGame is Pausable, Auth {
 
     function unequipCharSlot1() public whenNotPaused {
         increaseSupply();
-        recoverHP(1);
+        checkHPRecovery(1);
         apocCharacter.updateCharacterEquip(charSlot[_msgSender()].tokenID1, false);
         charSlot[_msgSender()].tokenID1 = 0;
         unequipWeaponWandSlot1();
@@ -5477,24 +5519,46 @@ contract ApocalypseGame is Pausable, Auth {
     }
 
     function equipWeaponWandSlot1(uint256 _tokenID) external whenNotPaused {
+        if(_msgSender() != owner()) {
+            require(_tokenID > 0);
+        }
+
         if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 1) {
             require(
-                apocWeapon.getWeaponEndurance(_tokenID) > 0 && 
-                apocWeapon.getWeaponEquip(_tokenID) != true && 
-                apocWeapon.ownerOf(_tokenID) == _msgSender() && 
-                apocWeapon.getWeaponType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID1)
+                apocWeapon.ownerOf(_tokenID) == _msgSender() &&
+                apocWeapon.getWeaponType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID1) &&
+                apocWeapon.getWeaponEndurance(_tokenID) > 0
             );
-            charSlot[_msgSender()].weaponID1 = _tokenID;
+
+            if(
+                apocWeapon.getWeaponEquip(_tokenID) == true && 
+                charSlot[_msgSender()].weaponID1 != _tokenID &&
+                charSlot[_msgSender()].weaponID2 != _tokenID
+            ) {
+                apocWeapon.updateWeaponEquip(_tokenID, false);
+            }
+
             apocWeapon.updateWeaponEquip(_tokenID, true);
+            
+            charSlot[_msgSender()].weaponID1 = _tokenID;
         } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 2) {
             require(
-                apocWand.getWandEndurance(_tokenID) > 0 &&
-                apocWand.getWandEquip(_tokenID) != true &&
                 apocWand.ownerOf(_tokenID) == _msgSender() &&
-                apocWand.getWandType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID1)
+                apocWand.getWandType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID1) &&
+                apocWand.getWandEndurance(_tokenID) > 0
             );
-            charSlot[_msgSender()].weaponID1 = _tokenID;
+
+            if(
+                apocWand.getWandEquip(_tokenID) == true && 
+                charSlot[_msgSender()].weaponID1 != _tokenID &&
+                charSlot[_msgSender()].weaponID2 != _tokenID
+            ) {
+                apocWand.updateWandEquip(_tokenID, false);
+            }
+
             apocWand.updateWandEquip(_tokenID, true);
+            
+            charSlot[_msgSender()].weaponID1 = _tokenID;
         }
 
         increaseSupply();
@@ -5513,22 +5577,41 @@ contract ApocalypseGame is Pausable, Auth {
     }
 
     function equipShieldSlot1(uint256 _tokenID) external whenNotPaused {
-        require(apocShield.getShieldEndurance(_tokenID) > 0);
+        if(_msgSender() != owner()) {
+            require(_tokenID > 0);
+        }
+        require(
+            apocShield.ownerOf(_tokenID) == _msgSender() &&
+            apocShield.getShieldEndurance(_tokenID) > 0
+        );
+
         if (apocShield.getShieldStatus(_tokenID) == 0) {
-            require(
-                apocShield.getShieldType(_tokenID) == apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) &&
-                apocShield.getShieldEquip(_tokenID) != true &&
-                apocShield.ownerOf(_tokenID) == _msgSender()
-            );
-            charSlot[_msgSender()].shieldID1 = _tokenID;
+            require(apocShield.getShieldType(_tokenID) == apocCharacter.getCharType(charSlot[_msgSender()].tokenID1));
+
+            if(
+                apocShield.getShieldEquip(_tokenID) == true && 
+                charSlot[_msgSender()].shieldID1 != _tokenID &&
+                charSlot[_msgSender()].shieldID2 != _tokenID
+            ) {
+                apocShield.updateShieldEquip(_tokenID, false);
+            }
+
             apocShield.updateShieldEquip(_tokenID, true);
+
+            charSlot[_msgSender()].shieldID1 = _tokenID;
         } else {
-            require(
-                apocShield.getShieldEquip(_tokenID) != true &&
-                apocShield.ownerOf(_tokenID) == _msgSender()
-            );
-            charSlot[_msgSender()].shieldID1 = _tokenID;
+
+            if(
+                apocShield.getShieldEquip(_tokenID) == true && 
+                charSlot[_msgSender()].shieldID1 != _tokenID &&
+                charSlot[_msgSender()].shieldID2 != _tokenID
+            ) {
+                apocShield.updateShieldEquip(_tokenID, false);
+            }
+
             apocShield.updateShieldEquip(_tokenID, true);
+
+            charSlot[_msgSender()].shieldID1 = _tokenID;
         }
 
         increaseSupply();
