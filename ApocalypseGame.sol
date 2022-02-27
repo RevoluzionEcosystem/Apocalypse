@@ -5561,6 +5561,8 @@ contract ApocalypseGame is Pausable, Auth {
         checkHPRecovery(1);
         apocCharacter.updateCharacterEquip(charSlot[_msgSender()].tokenID1, false);
         charSlot[_msgSender()].tokenID1 = 0;
+        unequipWeaponWandSlot1();
+        unequipShieldSlot1();
     }
 
     function equipWeaponWandSlot1(uint256 _tokenID) external whenNotPaused {
@@ -5594,10 +5596,10 @@ contract ApocalypseGame is Pausable, Auth {
     }
 
     function unequipWeaponWandSlot1() public whenNotPaused {
-        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 1) {
+        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 1 || charSlot[_msgSender()].tokenID1 == 0) {
             apocWeapon.updateWeaponEquip(charSlot[_msgSender()].weaponID1, false);
             charSlot[_msgSender()].weaponID1 = 0;
-        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 2) {
+        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 2 || charSlot[_msgSender()].tokenID1 == 0) {
             apocWand.updateWandEquip(charSlot[_msgSender()].weaponID1, false);
             charSlot[_msgSender()].weaponID1 = 0;
         }
@@ -5655,6 +5657,8 @@ contract ApocalypseGame is Pausable, Auth {
         checkHPRecovery(2);
         apocCharacter.updateCharacterEquip(charSlot[_msgSender()].tokenID2, false);
         charSlot[_msgSender()].tokenID2 = 0;
+        unequipWeaponWandSlot2();
+        unequipShieldSlot2();
     }
 
     function equipWeaponWandSlot2(uint256 _tokenID) external whenNotPaused {
@@ -5688,10 +5692,10 @@ contract ApocalypseGame is Pausable, Auth {
     }
 
     function unequipWeaponWandSlot2() public whenNotPaused {
-        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 1) {
+        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 1 || charSlot[_msgSender()].tokenID1 == 0) {
             apocWeapon.updateWeaponEquip(charSlot[_msgSender()].weaponID2, false);
             charSlot[_msgSender()].weaponID2 = 0;
-        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 2) {
+        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 2 || charSlot[_msgSender()].tokenID1 == 0) {
             apocWand.updateWandEquip(charSlot[_msgSender()].weaponID2, false);
             charSlot[_msgSender()].weaponID2 = 0;
         }
@@ -5829,9 +5833,6 @@ contract ApocalypseGame is Pausable, Auth {
             );
             apocWand.reduceEndurance(_charWeaponID, enduranceDeduction);
         }
-
-        //uint256[] memory rand = mixer(_charTokenID);
-
         
         uint256 userAddress = uint256(uint160(_msgSender()));
         uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
