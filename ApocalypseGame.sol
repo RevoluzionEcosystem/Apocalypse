@@ -5376,16 +5376,16 @@ contract ApocalypseGame is Pausable, Auth {
     }
     
     function dailySupplyIncrease() internal {
-        apocCharacter.addSpecificMaxCharSupply(1, 1, 1, maxSupplyIncrease); // fencing warriors
-        apocCharacter.addSpecificMaxCharSupply(1, 1, 2, maxSupplyIncrease); // axe warriors
-        apocCharacter.addSpecificMaxCharSupply(1, 1, 3, maxSupplyIncrease); // bow warriors
-        apocCharacter.addSpecificMaxCharSupply(1, 1, 4, maxSupplyIncrease); // sword warriors
-        apocCharacter.addSpecificMaxCharSupply(1, 1, 5, maxSupplyIncrease); // hammer warriors                        
-        apocCharacter.addSpecificMaxCharSupply(1, 2, 1, maxSupplyIncrease); // energy mages
-        apocCharacter.addSpecificMaxCharSupply(1, 2, 2, maxSupplyIncrease); // lightning mages
-        apocCharacter.addSpecificMaxCharSupply(1, 2, 3, maxSupplyIncrease); // earth mages
-        apocCharacter.addSpecificMaxCharSupply(1, 2, 4, maxSupplyIncrease); // ice mages
-        apocCharacter.addSpecificMaxCharSupply(1, 2, 5, maxSupplyIncrease); // fire mages
+        apocCharacter.addSpecificMaxCharSupply(1, 0, 0, maxSupplyIncrease); // fencing warriors
+        apocCharacter.addSpecificMaxCharSupply(1, 0, 1, maxSupplyIncrease); // axe warriors
+        apocCharacter.addSpecificMaxCharSupply(1, 0, 2, maxSupplyIncrease); // bow warriors
+        apocCharacter.addSpecificMaxCharSupply(1, 0, 3, maxSupplyIncrease); // sword warriors
+        apocCharacter.addSpecificMaxCharSupply(1, 0, 4, maxSupplyIncrease); // hammer warriors                        
+        apocCharacter.addSpecificMaxCharSupply(1, 1, 0, maxSupplyIncrease); // energy mages
+        apocCharacter.addSpecificMaxCharSupply(1, 1, 1, maxSupplyIncrease); // lightning mages
+        apocCharacter.addSpecificMaxCharSupply(1, 1, 2, maxSupplyIncrease); // earth mages
+        apocCharacter.addSpecificMaxCharSupply(1, 1, 3, maxSupplyIncrease); // ice mages
+        apocCharacter.addSpecificMaxCharSupply(1, 1, 4, maxSupplyIncrease); // fire mages
     }
 
     function recoverHP(uint256 _slot) internal {
@@ -5528,12 +5528,36 @@ contract ApocalypseGame is Pausable, Auth {
         if(
             apocCharacter.getCharEquip(_tokenID) == true && 
             charSlot[_msgSender()].tokenID1 != _tokenID &&
-            charSlot[_msgSender()].tokenID1 != _tokenID
+            charSlot[_msgSender()].tokenID2 != _tokenID
         ) {
             apocCharacter.updateCharacterEquip(_tokenID, false);
         }
 
         apocCharacter.updateCharacterEquip(_tokenID, true);
+    }
+    
+    function getCharSlot1(address _address) public view returns (uint256) {
+        return charSlot[_address].tokenID1;
+    }
+
+    function getCharSlot2(address _address) public view returns (uint256) {
+        return charSlot[_address].tokenID2;
+    }
+       
+    function getWeaponSlot1(address _address) public view returns (uint256) {
+        return charSlot[_address].weaponID1;
+    }
+
+    function getWeaponSlot2(address _address) public view returns (uint256) {
+        return charSlot[_address].weaponID2;
+    } 
+       
+    function getShieldSlot1(address _address) public view returns (uint256) {
+        return charSlot[_address].shieldID1;
+    }
+
+    function getShieldSlot2(address _address) public view returns (uint256) {
+        return charSlot[_address].shieldID2;
     }
         
     /* Equip functions */
