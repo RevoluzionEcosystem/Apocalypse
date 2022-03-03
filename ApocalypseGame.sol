@@ -5768,7 +5768,7 @@ contract ApocalypseGame is Pausable, Auth {
         }
     }
 
-    function fightSlot1() public whenNotPaused returns (bool, uint256){
+    function fightSlot1() public whenNotPaused returns (bool, uint256, uint256){
         
         checkHPRecovery(1);
 
@@ -5814,11 +5814,11 @@ contract ApocalypseGame is Pausable, Auth {
 
         increaseSupply();
 
-        return (fightStatus, drop);
+        return (fightStatus, rand[1], drop);
 
     }
 
-    function fightSlot2() public whenNotPaused returns (bool, uint256){
+    function fightSlot2() public whenNotPaused returns (bool, uint256, uint256){
 
         checkHPRecovery(2);
 
@@ -5864,7 +5864,7 @@ contract ApocalypseGame is Pausable, Auth {
 
         increaseSupply();
 
-        return (fightStatus, drop);
+        return (fightStatus, rand[1], drop);
 
     }
 
