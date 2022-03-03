@@ -5335,7 +5335,7 @@ contract ApocalypseGame is Pausable, Auth {
     }
     
     function updateBaseWinningRate(uint256 _characterLevel, uint256 _baseWinningRate) public onlyOwner {
-        require(_characterLevel > 0 && _characterLevel < maxLevel && _baseWinningRate > 0);
+        require(_characterLevel > 0 && _characterLevel <= maxLevel && _baseWinningRate > 0);
         baseWinningRate[_characterLevel - 1] = _baseWinningRate;
     }
     
@@ -5590,7 +5590,7 @@ contract ApocalypseGame is Pausable, Auth {
             require(_tokenID > 0);
         }
 
-        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 1) {
+        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 0) {
             require(
                 apocWeapon.ownerOf(_tokenID) == _msgSender() &&
                 apocWeapon.getWeaponType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID1) &&
@@ -5600,7 +5600,7 @@ contract ApocalypseGame is Pausable, Auth {
             checkWeaponEquip(_tokenID);
             
             charSlot[_msgSender()].weaponID1 = _tokenID;
-        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 2) {
+        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 1) {
             require(
                 apocWand.ownerOf(_tokenID) == _msgSender() &&
                 apocWand.getWandType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID1) &&
@@ -5616,10 +5616,10 @@ contract ApocalypseGame is Pausable, Auth {
     }
 
     function unequipWeaponWandSlot1() public whenNotPaused {
-        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 1 || charSlot[_msgSender()].tokenID1 == 0) {
+        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 0) {
             apocWeapon.updateWeaponEquip(charSlot[_msgSender()].weaponID1, false);
             charSlot[_msgSender()].weaponID1 = 0;
-        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 2 || charSlot[_msgSender()].tokenID1 == 0) {
+        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 1) {
             apocWand.updateWandEquip(charSlot[_msgSender()].weaponID1, false);
             charSlot[_msgSender()].weaponID1 = 0;
         }
@@ -5686,7 +5686,7 @@ contract ApocalypseGame is Pausable, Auth {
             require(_tokenID > 0);
         }
 
-        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 1) {
+        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 0) {
             require(
                 apocWeapon.ownerOf(_tokenID) == _msgSender() &&
                 apocWeapon.getWeaponType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID2) &&
@@ -5696,7 +5696,7 @@ contract ApocalypseGame is Pausable, Auth {
             checkWeaponEquip(_tokenID);
             
             charSlot[_msgSender()].weaponID2 = _tokenID;
-        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 2) {
+        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 1) {
             require(
                 apocWand.ownerOf(_tokenID) == _msgSender() &&
                 apocWand.getWandType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID2) &&
@@ -5712,10 +5712,10 @@ contract ApocalypseGame is Pausable, Auth {
     }
 
     function unequipWeaponWandSlot2() public whenNotPaused {
-        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 1 || charSlot[_msgSender()].tokenID1 == 0) {
+        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 0) {
             apocWeapon.updateWeaponEquip(charSlot[_msgSender()].weaponID2, false);
             charSlot[_msgSender()].weaponID2 = 0;
-        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 2 || charSlot[_msgSender()].tokenID1 == 0) {
+        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 1) {
             apocWand.updateWandEquip(charSlot[_msgSender()].weaponID2, false);
             charSlot[_msgSender()].weaponID2 = 0;
         }
