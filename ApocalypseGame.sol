@@ -5442,12 +5442,12 @@ contract ApocalypseGame is Pausable, Auth {
 
     function checkFight(uint256 _charTokenID, uint256 _charWeaponID, uint256 _rand) internal view returns (bool) {
         if (
-            apocCharacter.getCharType(_charTokenID) == 1 &&
+            apocCharacter.getCharType(_charTokenID) == 0 &&
             getSuccessRate(_charTokenID, apocWeapon.getBaseAttack(_charWeaponID)) >= _rand
         ) {
             return true;
         } else if (
-            apocCharacter.getCharType(_charTokenID) == 2 &&
+            apocCharacter.getCharType(_charTokenID) == 1 &&
             getSuccessRate(_charTokenID, apocWand.getBaseAttack(_charWeaponID)) >= _rand
         ) {
             return true;
@@ -5790,13 +5790,13 @@ contract ApocalypseGame is Pausable, Auth {
         
         apocShield.reduceEndurance(_charShieldID, enduranceDeduction);
 
-        if (apocCharacter.getCharType(_charTokenID) == 1) {
+        if (apocCharacter.getCharType(_charTokenID) == 0) {
             require(
                 apocWeapon.getWeaponEquip(_charWeaponID) == true &&
                 apocWeapon.getWeaponEndurance(_charWeaponID) > 0
             );
             apocWeapon.reduceEndurance(_charWeaponID, enduranceDeduction);
-        } else if (apocCharacter.getCharType(_charTokenID) == 2) {
+        } else if (apocCharacter.getCharType(_charTokenID) == 1) {
             require(
                 apocWand.getWandEquip(_charWeaponID) == true &&
                 apocWand.getWandEndurance(_charWeaponID) > 0
@@ -5840,13 +5840,13 @@ contract ApocalypseGame is Pausable, Auth {
         
         apocShield.reduceEndurance(_charShieldID, enduranceDeduction);
 
-        if (apocCharacter.getCharType(_charTokenID) == 1) {
+        if (apocCharacter.getCharType(_charTokenID) == 0) {
             require(
                 apocWeapon.getWeaponEquip(_charWeaponID) == true &&
                 apocWeapon.getWeaponEndurance(_charWeaponID) > 0
             );
             apocWeapon.reduceEndurance(_charWeaponID, enduranceDeduction);
-        } else if (apocCharacter.getCharType(_charTokenID) == 2) {
+        } else if (apocCharacter.getCharType(_charTokenID) == 1) {
             require(
                 apocWand.getWandEquip(_charWeaponID) == true &&
                 apocWand.getWandEndurance(_charWeaponID) > 0
