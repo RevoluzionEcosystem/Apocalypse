@@ -5394,10 +5394,12 @@ contract ApocalypseGame is Pausable, Auth {
             uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate1);
             uint256 recover = duration.div(durationHPRecover).mul(hpRecovery);
             apocCharacter.recoverHP(charSlot[_msgSender()].tokenID1, recover);
+            charSlot[_msgSender()].lastHPUpdate1 = block.timestamp;
         } else if (_slot == 2) {
             uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate2);
             uint256 recover = duration.div(durationHPRecover).mul(hpRecovery);
             apocCharacter.recoverHP(charSlot[_msgSender()].tokenID2, recover);
+            charSlot[_msgSender()].lastHPUpdate2 = block.timestamp;
         }
     }
 
