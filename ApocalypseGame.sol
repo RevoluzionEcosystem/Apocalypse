@@ -2887,17 +2887,17 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         
         rarePercentage = [5, 4];
 
-        addSpecificMaxWeaponSupply(0, 1, 2); // 2 rare fencing
-        addSpecificMaxWeaponSupply(0, 2, 2); // 2 rare axe
-        addSpecificMaxWeaponSupply(0, 3, 2); // 2 rare bow
-        addSpecificMaxWeaponSupply(0, 4, 2); // 2 rare sword
-        addSpecificMaxWeaponSupply(0, 5, 2); // 2 rare hammer
+        addSpecificMaxWeaponSupply(0, 0, 2); // 2 rare fencing
+        addSpecificMaxWeaponSupply(0, 1, 2); // 2 rare axe
+        addSpecificMaxWeaponSupply(0, 2, 2); // 2 rare bow
+        addSpecificMaxWeaponSupply(0, 3, 2); // 2 rare sword
+        addSpecificMaxWeaponSupply(0, 4, 2); // 2 rare hammer
 
-        addSpecificMaxWeaponSupply(1, 1, 100000); // 100,000 fencing
-        addSpecificMaxWeaponSupply(1, 2, 100000); // 100,000 axe
-        addSpecificMaxWeaponSupply(1, 3, 100000); // 100,000 bow
-        addSpecificMaxWeaponSupply(1, 4, 100000); // 100,000 sword
-        addSpecificMaxWeaponSupply(1, 5, 100000); // 100,000 hammer
+        addSpecificMaxWeaponSupply(1, 0, 100000); // 100,000 fencing
+        addSpecificMaxWeaponSupply(1, 1, 100000); // 100,000 axe
+        addSpecificMaxWeaponSupply(1, 2, 100000); // 100,000 bow
+        addSpecificMaxWeaponSupply(1, 3, 100000); // 100,000 sword
+        addSpecificMaxWeaponSupply(1, 4, 100000); // 100,000 hammer
 
         _createWeapon(
             [uint256(0),uint256(0)],
@@ -2984,6 +2984,8 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
     /* Default stats functions */
 
+    // Setter
+
     function setUpgradePercentage(uint256 _upgradeNumerator, uint256 _upgradePower) public authorized {
         require(_upgradeNumerator > 0 && _upgradePower > 0);
         upgradePercentage = [_upgradeNumerator, _upgradePower];
@@ -2998,6 +3000,21 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         require(_maxLevel > 0);
         maxLevel = _maxLevel;
         maxUpgradeStatus = _maxUpgradeStatus;
+    }
+
+    function setCommonBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
+        require(_baseEndurance > 0 && _baseAttack > 0);
+        commonBaseStat = [_baseEndurance, _baseAttack];
+    }
+
+    function setUpgradeBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
+        require(_baseEndurance > 0 && _baseAttack > 0);
+        upgradeBaseStat = [_baseEndurance, _baseAttack];
+    }
+
+    function setRareBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
+        require(_baseEndurance > 0 && _baseAttack > 0);
+        rareBaseStat = [_baseEndurance, _baseAttack];
     }
     
     function addCommonWeaponEndurance(uint256[] memory _commonWeaponEndurance) public authorized {
@@ -3035,39 +3052,36 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
             weaponDepletion.push(_weaponDepletion[i]);
         }
     }
-    
-    function updateCommonWeaponEndurance(uint256 _weaponLevel, uint256 _commonWeaponEndurance) public authorized {
-        require(_weaponLevel != 0 && _weaponLevel < commonWeaponEndurance.length && _commonWeaponEndurance > 0);
-        commonWeaponEndurance[_weaponLevel - 1] = _commonWeaponEndurance;
+
+    function addWeaponStatus(uint256[] memory _statusID) public authorized {
+        for(uint256 i = 0; i < _statusID.length; i++){
+            weaponStatus.push(_statusID[i]);
+        }
     }
 
-    function getCommonWeaponEndurance(uint256 _weaponLevel) public view returns (uint256) {
-        require(_weaponLevel != 0 && _weaponLevel < commonWeaponEndurance.length);
-        return commonWeaponEndurance[_weaponLevel - 1];
+    function addWeaponType(uint256[] memory _typeID) public authorized {
+        for(uint256 i = 0; i < _typeID.length; i++){
+            weaponType.push(_typeID[i]);
+        }
+    }
+    
+    function updateCommonWeaponEndurance(uint256 _weaponLevel, uint256 _commonWeaponEndurance) public authorized {
+        require(_weaponLevel != 0 && _weaponLevel <= commonWeaponEndurance.length && _commonWeaponEndurance > 0);
+        commonWeaponEndurance[_weaponLevel - 1] = _commonWeaponEndurance;
     }
     
     function updateUpgradeWeaponEndurance(uint256 _weaponLevel, uint256 _upgradeWeaponEndurance) public authorized {
-        require(_weaponLevel != 0 && _weaponLevel < upgradeWeaponEndurance.length && _upgradeWeaponEndurance > 0);
+        require(_weaponLevel != 0 && _weaponLevel <= upgradeWeaponEndurance.length && _upgradeWeaponEndurance > 0);
         upgradeWeaponEndurance[_weaponLevel - 1] = _upgradeWeaponEndurance;
-    }
-
-    function getUpgradeWeaponEndurance(uint256 _weaponLevel) public view returns (uint256) {
-        require(_weaponLevel != 0 && _weaponLevel < upgradeWeaponEndurance.length);
-        return upgradeWeaponEndurance[_weaponLevel - 1];
     }
     
     function updateRareWeaponEndurance(uint256 _weaponLevel, uint256 _rareWeaponEndurance) public authorized {
-        require(_weaponLevel != 0 && _weaponLevel < rareWeaponEndurance.length && _rareWeaponEndurance > 0);
+        require(_weaponLevel != 0 && _weaponLevel <= rareWeaponEndurance.length && _rareWeaponEndurance > 0);
         rareWeaponEndurance[_weaponLevel - 1] = _rareWeaponEndurance;
-    }
-
-    function getRareWeaponEndurance(uint256 _weaponLevel) public view returns (uint256) {
-        require(_weaponLevel != 0 && _weaponLevel < rareWeaponEndurance.length);
-        return rareWeaponEndurance[_weaponLevel - 1];
     }
     
     function updateWeaponAttack(uint256 _weaponLevel, uint256 _weaponAttack) public authorized {
-        require(_weaponLevel != 0 && _weaponLevel < weaponAttack.length && _weaponAttack > 0);
+        require(_weaponLevel != 0 && _weaponLevel <= weaponAttack.length && _weaponAttack > 0);
         weaponAttack[_weaponLevel - 1] = _weaponAttack;
     }
     
@@ -3081,43 +3095,48 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         weaponDepletion[_weaponLevel] = _weaponDepletion;
     }
 
-    function setCommonBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
-        require(_baseEndurance > 0 && _baseAttack > 0);
-        commonBaseStat = [_baseEndurance, _baseAttack];
+    // Getter
+
+    function getCommonWeaponEndurance(uint256 _weaponLevel) public view returns (uint256) {
+        require(_weaponLevel != 0 && _weaponLevel <= commonWeaponEndurance.length);
+        return commonWeaponEndurance[_weaponLevel - 1];
+    }
+
+    function getUpgradeWeaponEndurance(uint256 _weaponLevel) public view returns (uint256) {
+        require(_weaponLevel != 0 && _weaponLevel <= upgradeWeaponEndurance.length);
+        return upgradeWeaponEndurance[_weaponLevel - 1];
+    }
+
+    function getRareWeaponEndurance(uint256 _weaponLevel) public view returns (uint256) {
+        require(_weaponLevel != 0 && _weaponLevel <= rareWeaponEndurance.length);
+        return rareWeaponEndurance[_weaponLevel - 1];
+    }
+    
+    function getWeaponAttack(uint256 _weaponLevel) public view returns (uint256) {
+        require(_weaponLevel != 0 && _weaponLevel <= weaponAttack.length);
+        return weaponAttack[_weaponLevel - 1];
+    }
+    
+    function getWeaponUpChance(uint256 _weaponLevel) public view returns (uint256) {
+        require(_weaponLevel < weaponUpChance.length);
+        return weaponUpChance[_weaponLevel];
+    }
+    
+    function getWeaponDepletion(uint256 _weaponLevel) public view returns (uint256) {
+        require(_weaponLevel < weaponDepletion.length);
+        return weaponDepletion[_weaponLevel];
     }
 
     function getCommonBaseStat() public view returns (uint256[2] memory) {
         return commonBaseStat;
     }
 
-    function setUpgradeBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
-        require(_baseEndurance > 0 && _baseAttack > 0);
-        upgradeBaseStat = [_baseEndurance, _baseAttack];
-    }
-
     function getUpgradeBaseStat() public view returns (uint256[2] memory) {
         return upgradeBaseStat;
     }
 
-    function setRareBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
-        require(_baseEndurance > 0 && _baseAttack > 0);
-        rareBaseStat = [_baseEndurance, _baseAttack];
-    }
-
     function getRareBaseStat() public view returns (uint256[2] memory) {
         return rareBaseStat;
-    }
-
-    function addWeaponStatus(uint256[] memory _statusID) public authorized {
-        for(uint256 i = 0; i < _statusID.length; i++){
-            weaponStatus.push(_statusID[i]);
-        }
-    }
-
-    function addWeaponType(uint256[] memory _typeID) public authorized {
-        for(uint256 i = 0; i < _typeID.length; i++){
-            weaponType.push(_typeID[i]);
-        }
     }
 
     /* Weapon attributes functions */
@@ -3261,6 +3280,11 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         emit MintNewWeapon(to, tokenId);
     }
 
+    function _burnLevelUp(uint256 _tokenID1, uint256 _tokenID2) external whenNotPaused authorized {
+        _burnUpgrade(_tokenID1);
+        _burnUpgrade(_tokenID2);
+    }
+
     /* NFT upgrade logic functions */
 
     function _burnUpgrade(uint256 _tokenID) internal {
@@ -3279,7 +3303,7 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
     }
 
-    function upgradeWeapon(address _owner, uint256 _tokenID1, uint256 _tokenID2, uint256 _nextStatus) external whenNotPaused authorized returns (bool, uint256) {
+    function upgradeWeapon(address _owner, uint256 _tokenID1, uint256 _tokenID2) external whenNotPaused authorized returns (bool, uint256) {
         require(
             apocWeapon[_tokenID1].weaponStatus <= maxUpgradeStatus &&
             apocWeapon[_tokenID2].weaponStatus <= maxUpgradeStatus &&
@@ -3287,6 +3311,7 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         );
 
         uint256 _weaponType = apocWeapon[_tokenID1].weaponType;
+        uint256 _nextStatus = apocWeapon[_tokenID1].weaponStatus + 1;
 
         uint256 userAddress = uint256(uint160(_msgSender()));
         uint256 targetBlock = block.number + (upgradePercentage[1]/upgradePercentage[0]);
@@ -3438,58 +3463,59 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
     /* NFT drop logic functions */
 
     function dropSpecific(
-        address _owner,
+        address[] memory _owner,
         uint256 _weaponStatus,
         uint256 _weaponType
     ) external whenNotPaused onlyOwner {
-        
-        uint256 _weaponStatusIndex;
-        uint256 _weaponTypeIndex;
-        uint256 _baseEndurance;
-        uint256 _baseAttack;
+        for(uint256 i = 0; i < _owner.length; i++) {
+            uint256 _weaponStatusIndex;
+            uint256 _weaponTypeIndex;
+            uint256 _baseEndurance;
+            uint256 _baseAttack;
 
-        addSpecificMaxWeaponSupply(_weaponStatus, _weaponType, 1);
+            addSpecificMaxWeaponSupply(_weaponStatus, _weaponType, 1);
 
-        if (_weaponStatus == 0) {
-            _weaponStatusIndex = rareCurrentSupply + 1;
-            _weaponTypeIndex = currentRareWeaponSupply[_weaponType] + 1;
-            _baseEndurance = rareBaseStat[0];
-            _baseAttack = rareBaseStat[1];
-        } else if (_weaponStatus == 1) {
-            _weaponStatusIndex = commonCurrentSupply + 1;
-            _weaponTypeIndex = currentCommonWeaponSupply[_weaponType] + 1;
-            _baseEndurance = commonBaseStat[0];
-            _baseAttack = commonBaseStat[1];
-        } else {
-            _weaponStatusIndex = upgradeCurrentSupply + 1;
-            _weaponTypeIndex = currentSpecificUpgradeWeaponSupply[_weaponStatus][_weaponType] + 1;
-            _baseEndurance = upgradeBaseStat[0];
-            _baseAttack = upgradeBaseStat[1];
+            if (_weaponStatus == 0) {
+                _weaponStatusIndex = rareCurrentSupply + 1;
+                _weaponTypeIndex = currentRareWeaponSupply[_weaponType] + 1;
+                _baseEndurance = rareBaseStat[0];
+                _baseAttack = rareBaseStat[1];
+            } else if (_weaponStatus == 1) {
+                _weaponStatusIndex = commonCurrentSupply + 1;
+                _weaponTypeIndex = currentCommonWeaponSupply[_weaponType] + 1;
+                _baseEndurance = commonBaseStat[0];
+                _baseAttack = commonBaseStat[1];
+            } else {
+                _weaponStatusIndex = upgradeCurrentSupply + 1;
+                _weaponTypeIndex = currentSpecificUpgradeWeaponSupply[_weaponStatus][_weaponType] + 1;
+                _baseEndurance = upgradeBaseStat[0];
+                _baseAttack = upgradeBaseStat[1];
+            }
+
+            uint256[2] memory _currentSupplyInfo = [_weaponStatusIndex, _weaponTypeIndex];
+
+            _createWeapon(
+                _currentSupplyInfo,
+                _weaponStatus,
+                _weaponType,
+                0,
+                _baseEndurance,
+                _baseAttack
+            );
+
+            if (_weaponStatus == 0) {
+                rareCurrentSupply += 1;
+                currentRareWeaponSupply[_weaponType] += 1;
+            } else if (_weaponStatus == 1) {
+                commonCurrentSupply += 1;
+                currentCommonWeaponSupply[_weaponType] += 1;
+            } else {
+                upgradeCurrentSupply += 1;
+                currentSpecificUpgradeWeaponSupply[_weaponStatus][_weaponType] += 1;
+            }
+
+            _safeMint(_owner[i]);
         }
-
-        uint256[2] memory _currentSupplyInfo = [_weaponStatusIndex, _weaponTypeIndex];
-
-        _createWeapon(
-            _currentSupplyInfo,
-            _weaponStatus,
-            _weaponType,
-            0,
-            _baseEndurance,
-            _baseAttack
-        );
-
-        if (_weaponStatus == 0) {
-            rareCurrentSupply += 1;
-            currentRareWeaponSupply[_weaponType] += 1;
-        } else if (_weaponStatus == 1) {
-            commonCurrentSupply += 1;
-            currentCommonWeaponSupply[_weaponType] += 1;
-        } else {
-            upgradeCurrentSupply += 1;
-            currentSpecificUpgradeWeaponSupply[_weaponStatus][_weaponType] += 1;
-        }
-
-        _safeMint(_owner);
     }
 
     function dropRandom(
