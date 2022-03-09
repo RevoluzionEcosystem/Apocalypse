@@ -5966,6 +5966,7 @@ contract ApocalypseMediator is Pausable, Auth {
 
     IUniswapV2Router02 public router;
 
+    ApocalypseRandomizer public randomizer;
     ApocalypseCharacter public apocCharacter;
     ApocalypseWeapon public apocWeapon;
     ApocalypseWand public apocWand;
@@ -6015,6 +6016,7 @@ contract ApocalypseMediator is Pausable, Auth {
         IERC20Extended _apocToken,
         IERC20Extended _rewardToken,
         IUniswapV2Router02 _router,
+        ApocalypseRandomizer _randomizer,
         ApocalypseCharacter _apocCharacter,
         ApocalypseWeapon _apocWeapon,
         ApocalypseWand _apocWand,
@@ -6038,6 +6040,7 @@ contract ApocalypseMediator is Pausable, Auth {
         repairWandToken = _apocToken;
         repairShieldToken = _apocToken;
 
+        randomizer = _randomizer;
         apocCharacter = _apocCharacter;
         apocWeapon = _apocWeapon;
         apocWand = _apocWand;
@@ -6072,6 +6075,7 @@ contract ApocalypseMediator is Pausable, Auth {
     event ChangeMintWandToken(address caller, address prevMintWandToken, address newMintWandToken);
     event ChangeMintShieldToken(address caller, address prevMintShieldToken, address newMintShieldToken);
     event ChangeRouter(address caller, address prevRouter, address newRouter);
+    event ChangeRandomizer(address caller, address prevRandomizer, address newRandomizer);
     
 
     /** FUNCTION **/
@@ -6122,6 +6126,12 @@ contract ApocalypseMediator is Pausable, Auth {
         address prevRouter = address(router);
         router = _router;
         emit ChangeRouter(_msgSender(), prevRouter, address(router));
+    }
+
+    function changeRandomizer(ApocalypseRandomizer _randomizer) public authorized {
+        address prevRandomizer = address(randomizer);
+        randomizer = _randomizer;
+        emit ChangeRandomizer(_msgSender(), prevRandomizer, address(randomizer));
     }
 
     /* Default stats functions */
@@ -6205,7 +6215,7 @@ contract ApocalypseMediator is Pausable, Auth {
             rounds += 1;
         }
         uint256 gain = rounds.mul(apocCharacter.getCharLevel(_tokenID));
-        uint256 fee = gain.div(5);
+        uint256 fee = gain.mul(charLevelUpTax[0]).div(charLevelUpTax[1]);
         
         uint256 amount = checkPrice(fee, upgradeCharacterToken);
         upgradeCharacterToken.transferFrom(_msgSender(), address(upgradeCharacterToken), amount);
@@ -6221,22 +6231,70 @@ contract ApocalypseMediator is Pausable, Auth {
         uint256 upChance = apocWeapon.getWeaponUpChance(level);
         uint256 depletion = apocWeapon.getWeaponDepletion(level);
         
-        levelUpWeaponToken.transferFrom(_msgSender(), address(levelUpWeaponToken), amount);
-        apocWeapon.levelUp(_tokenID);
+        uint256 userAddress = uint256(uint160(_msgSender()));
+        uint256 targetBlock = block.number + (upChance/depletion);
+        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, targetBlock);
+        uint256 checkLevelUp = randomizer.sliceNumber(random, 10, 2, upChance/depletion);
+        uint256 checkBurn = randomizer.sliceNumber(random, 10, 2, depletion/upChance);
+
+        if (checkLevelUp > upChance && checkBurn <= depletion) {
+            apocWeapon._burnLevelUp(_tokenID);
+            return;
+        } else if (checkLevelUp > upChance && checkBurn > depletion) {
+            return;
+        } else {
+            levelUpWeaponToken.transferFrom(_msgSender(), address(levelUpWeaponToken), amount);
+            apocWeapon.levelUp(_tokenID);
+        }   
+
     }
 
     function levelUpWand(uint256 _tokenID) external whenNotPaused {
         require(_msgSender() == apocWand.ownerOf(_tokenID));
         uint256 amount = checkPrice(wandLevelUpBUSDPrice, levelUpWandToken);
-        levelUpWandToken.transferFrom(_msgSender(), address(levelUpWandToken), amount);
-        apocWand.levelUp(_tokenID);
+        uint256 level = apocWand.getWandLevel(_tokenID);
+        uint256 upChance = apocWand.getWandUpChance(level);
+        uint256 depletion = apocWand.getWandDepletion(level);
+        
+        uint256 userAddress = uint256(uint160(_msgSender()));
+        uint256 targetBlock = block.number + (upChance/depletion);
+        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, targetBlock);
+        uint256 checkLevelUp = randomizer.sliceNumber(random, 10, 2, upChance/depletion);
+        uint256 checkBurn = randomizer.sliceNumber(random, 10, 2, depletion/upChance);
+
+        if (checkLevelUp > upChance && checkBurn <= depletion) {
+            apocWand._burnLevelUp(_tokenID);
+            return;
+        } else if (checkLevelUp > upChance && checkBurn > depletion) {
+            return;
+        } else {
+            levelUpWandToken.transferFrom(_msgSender(), address(levelUpWandToken), amount);
+            apocWand.levelUp(_tokenID);
+        }   
     }
 
     function levelUpShield(uint256 _tokenID) external whenNotPaused {
         require(_msgSender() == apocShield.ownerOf(_tokenID));
         uint256 amount = checkPrice(shieldLevelUpBUSDPrice, levelUpShieldToken);
-        levelUpShieldToken.transferFrom(_msgSender(), address(levelUpShieldToken), amount);
-        apocShield.levelUp(_tokenID);
+        uint256 level = apocShield.getShieldLevel(_tokenID);
+        uint256 upChance = apocShield.getShieldUpChance(level);
+        uint256 depletion = apocShield.getShieldDepletion(level);
+        
+        uint256 userAddress = uint256(uint160(_msgSender()));
+        uint256 targetBlock = block.number + (upChance/depletion);
+        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, targetBlock);
+        uint256 checkLevelUp = randomizer.sliceNumber(random, 10, 2, upChance/depletion);
+        uint256 checkBurn = randomizer.sliceNumber(random, 10, 2, depletion/upChance);
+
+        if (checkLevelUp > upChance && checkBurn <= depletion) {
+            apocapocShieldShield._burnLevelUp(_tokenID);
+            return;
+        } else if (checkLevelUp > upChance && checkBurn > depletion) {
+            return;
+        } else {
+            levelUpShieldToken.transferFrom(_msgSender(), address(levelUpShieldToken), amount);
+            apocShield.levelUp(_tokenID);
+        }   
     }
 
     /* Pay and mint NFT functions */
