@@ -3280,9 +3280,8 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         emit MintNewWeapon(to, tokenId);
     }
 
-    function _burnLevelUp(uint256 _tokenID1, uint256 _tokenID2) external whenNotPaused authorized {
-        _burnUpgrade(_tokenID1);
-        _burnUpgrade(_tokenID2);
+    function _burnLevelUp(uint256 _tokenID) external whenNotPaused authorized {
+        _burnUpgrade(_tokenID);
     }
 
     /* NFT upgrade logic functions */
@@ -3710,17 +3709,17 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         
         rarePercentage = [5, 4];
 
-        addSpecificMaxWandSupply(0, 1, 2); // 2 rare energy
-        addSpecificMaxWandSupply(0, 2, 2); // 2 rare lightning
-        addSpecificMaxWandSupply(0, 3, 2); // 2 rare earth
-        addSpecificMaxWandSupply(0, 4, 2); // 2 rare ice
-        addSpecificMaxWandSupply(0, 5, 2); // 2 rare fire
+        addSpecificMaxWandSupply(0, 0, 2); // 2 rare energy
+        addSpecificMaxWandSupply(0, 1, 2); // 2 rare lightning
+        addSpecificMaxWandSupply(0, 2, 2); // 2 rare earth
+        addSpecificMaxWandSupply(0, 3, 2); // 2 rare ice
+        addSpecificMaxWandSupply(0, 4, 2); // 2 rare fire
 
-        addSpecificMaxWandSupply(1, 1, 100000); // 100,000 energy
-        addSpecificMaxWandSupply(1, 2, 100000); // 100,000 lightning
-        addSpecificMaxWandSupply(1, 3, 100000); // 100,000 earth
-        addSpecificMaxWandSupply(1, 4, 100000); // 100,000 ice
-        addSpecificMaxWandSupply(1, 5, 100000); // 100,000 fire
+        addSpecificMaxWandSupply(1, 0, 100000); // 100,000 energy
+        addSpecificMaxWandSupply(1, 1, 100000); // 100,000 lightning
+        addSpecificMaxWandSupply(1, 2, 100000); // 100,000 earth
+        addSpecificMaxWandSupply(1, 3, 100000); // 100,000 ice
+        addSpecificMaxWandSupply(1, 4, 100000); // 100,000 fire
 
         _createWand(
             [uint256(0),uint256(0)],
@@ -3807,6 +3806,8 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
 
     /* Default stats functions */
 
+    // Setter
+
     function setUpgradePercentage(uint256 _upgradeNumerator, uint256 _upgradePower) public authorized {
         require(_upgradeNumerator > 0 && _upgradePower > 0);
         upgradePercentage = [_upgradeNumerator, _upgradePower];
@@ -3821,6 +3822,21 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         require(_maxLevel > 0);
         maxLevel = _maxLevel;
         maxUpgradeStatus = _maxUpgradeStatus;
+    }
+
+    function setCommonBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
+        require(_baseEndurance > 0 && _baseAttack > 0);
+        commonBaseStat = [_baseEndurance, _baseAttack];
+    }
+
+    function setUpgradeBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
+        require(_baseEndurance > 0 && _baseAttack > 0);
+        upgradeBaseStat = [_baseEndurance, _baseAttack];
+    }
+
+    function setRareBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
+        require(_baseEndurance > 0 && _baseAttack > 0);
+        rareBaseStat = [_baseEndurance, _baseAttack];
     }
     
     function addCommonWandEndurance(uint256[] memory _commonWandEndurance) public authorized {
@@ -3858,39 +3874,36 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
             wandDepletion.push(_wandDepletion[i]);
         }
     }
+
+    function addWandStatus(uint256[] memory _statusID) public authorized {
+        for(uint256 i = 0; i < _statusID.length; i++){
+            wandStatus.push(_statusID[i]);
+        }
+    }
+
+    function addWandType(uint256[] memory _typeID) public authorized {
+        for(uint256 i = 0; i < _typeID.length; i++){
+            wandType.push(_typeID[i]);
+        }
+    }
     
     function updateCommonWandEndurance(uint256 _wandLevel, uint256 _commonWandEndurance) public authorized {
-        require(_wandLevel != 0 && _wandLevel < commonWandEndurance.length && _commonWandEndurance > 0);
+        require(_wandLevel != 0 && _wandLevel <= commonWandEndurance.length && _commonWandEndurance > 0);
         commonWandEndurance[_wandLevel - 1] = _commonWandEndurance;
     }
     
-    function getCommonWandEndurance(uint256 _wandLevel) public view returns (uint256) {
-        require(_wandLevel != 0 && _wandLevel < commonWandEndurance.length);
-        return commonWandEndurance[_wandLevel - 1];
-    }
-    
     function updateUpgradeWandEndurance(uint256 _wandLevel, uint256 _upgradeWandEndurance) public authorized {
-        require(_wandLevel != 0 && _wandLevel < upgradeWandEndurance.length && _upgradeWandEndurance > 0);
+        require(_wandLevel != 0 && _wandLevel <= upgradeWandEndurance.length && _upgradeWandEndurance > 0);
         upgradeWandEndurance[_wandLevel - 1] = _upgradeWandEndurance;
     }
     
-    function getUpgradeWandEndurance(uint256 _wandLevel) public view returns (uint256) {
-        require(_wandLevel != 0 && _wandLevel < upgradeWandEndurance.length);
-        return upgradeWandEndurance[_wandLevel - 1];
-    }
-    
     function updateRareWandEndurance(uint256 _wandLevel, uint256 _rareWandEndurance) public authorized {
-        require(_wandLevel != 0 && _wandLevel < rareWandEndurance.length && _rareWandEndurance > 0);
+        require(_wandLevel != 0 && _wandLevel <= rareWandEndurance.length && _rareWandEndurance > 0);
         rareWandEndurance[_wandLevel - 1] = _rareWandEndurance;
     }
-    
-    function getRareWandEndurance(uint256 _wandLevel) public view returns (uint256) {
-        require(_wandLevel != 0 && _wandLevel < rareWandEndurance.length);
-        return rareWandEndurance[_wandLevel - 1];
-    }
-    
+
     function updateWandAttack(uint256 _wandLevel, uint256 _wandAttack) public authorized {
-        require(_wandLevel != 0 && _wandLevel < wandAttack.length && _wandAttack > 0);
+        require(_wandLevel != 0 && _wandLevel <= wandAttack.length && _wandAttack > 0);
         wandAttack[_wandLevel - 1] = _wandAttack;
     }
     
@@ -3903,44 +3916,49 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         require(_wandLevel < wandDepletion.length && _wandDepletion >= 0);
         wandDepletion[_wandLevel] = _wandDepletion;
     }
+    
+    // Getter
+    
+    function getCommonWandEndurance(uint256 _wandLevel) public view returns (uint256) {
+        require(_wandLevel != 0 && _wandLevel <= commonWandEndurance.length);
+        return commonWandEndurance[_wandLevel - 1];
+    }
+    
+    function getUpgradeWandEndurance(uint256 _wandLevel) public view returns (uint256) {
+        require(_wandLevel != 0 && _wandLevel <= upgradeWandEndurance.length);
+        return upgradeWandEndurance[_wandLevel - 1];
+    }
+    
+    function getRareWandEndurance(uint256 _wandLevel) public view returns (uint256) {
+        require(_wandLevel != 0 && _wandLevel <= rareWandEndurance.length);
+        return rareWandEndurance[_wandLevel - 1];
+    }
 
-    function setCommonBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
-        require(_baseEndurance > 0 && _baseAttack > 0);
-        commonBaseStat = [_baseEndurance, _baseAttack];
+    function getWandAttack(uint256 _wandLevel) public view returns (uint256) {
+        require(_wandLevel != 0 && _wandLevel <= wandAttack.length);
+        return wandAttack[_wandLevel - 1];
+    }
+
+    function getWandUpChance(uint256 _wandLevel) public view returns (uint256) {
+        require(_wandLevel < wandUpChance.length);
+        return wandUpChance[_wandLevel];
+    }
+
+    function getWandDepletion(uint256 _wandLevel) public view returns (uint256) {
+        require(_wandLevel < wandDepletion.length);
+        return wandDepletion[_wandLevel];
     }
 
     function getCommonBaseStat() public view returns (uint256[2] memory) {
         return commonBaseStat;
     }
 
-    function setUpgradeBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
-        require(_baseEndurance > 0 && _baseAttack > 0);
-        upgradeBaseStat = [_baseEndurance, _baseAttack];
-    }
-
     function getUpgradeBaseStat() public view returns (uint256[2] memory) {
         return upgradeBaseStat;
     }
 
-    function setRareBaseStat(uint256 _baseEndurance, uint256 _baseAttack) public authorized {
-        require(_baseEndurance > 0 && _baseAttack > 0);
-        rareBaseStat = [_baseEndurance, _baseAttack];
-    }
-
     function getRareBaseStat() public view returns (uint256[2] memory) {
         return rareBaseStat;
-    }
-
-    function addWandStatus(uint256[] memory _statusID) public authorized {
-        for(uint256 i = 0; i < _statusID.length; i++){
-            wandStatus.push(_statusID[i]);
-        }
-    }
-
-    function addWandType(uint256[] memory _typeID) public authorized {
-        for(uint256 i = 0; i < _typeID.length; i++){
-            wandType.push(_typeID[i]);
-        }
     }
 
     /* Wand attributes functions */
@@ -4084,6 +4102,10 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         emit MintNewWand(to, tokenId);
     }
 
+    function _burnLevelUp(uint256 _tokenID) external whenNotPaused authorized {
+        _burnUpgrade(_tokenID);
+    }
+
     /* NFT upgrade logic functions */
 
     function _burnUpgrade(uint256 _tokenID) internal {
@@ -4102,7 +4124,7 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
 
     }
 
-    function upgradeWand(address _owner, uint256 _tokenID1, uint256 _tokenID2, uint256 _nextStatus) external whenNotPaused authorized returns (bool, uint256) {
+    function upgradeWand(address _owner, uint256 _tokenID1, uint256 _tokenID2) external whenNotPaused authorized returns (bool, uint256) {
         require(
             apocWand[_tokenID1].wandStatus <= maxUpgradeStatus &&
             apocWand[_tokenID2].wandStatus <= maxUpgradeStatus &&
@@ -4110,6 +4132,7 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         );
 
         uint256 _wandType = apocWand[_tokenID1].wandType;
+        uint256 _nextStatus = apocWand[_tokenID1].wandStatus + 1;
 
         uint256 userAddress = uint256(uint160(_msgSender()));
         uint256 targetBlock = block.number + (upgradePercentage[1]/upgradePercentage[0]);
@@ -4261,58 +4284,59 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
     /* NFT drop logic functions */
 
     function dropSpecific(
-        address _owner,
+        address[] memory _owner,
         uint256 _wandStatus,
         uint256 _wandType
     ) external whenNotPaused onlyOwner {
-        
-        uint256 _wandStatusIndex;
-        uint256 _wandTypeIndex;
-        uint256 _baseEndurance;
-        uint256 _baseAttack;
+        for(uint256 i = 0; i < _owner.length; i++) {
+            uint256 _wandStatusIndex;
+            uint256 _wandTypeIndex;
+            uint256 _baseEndurance;
+            uint256 _baseAttack;
 
-        addSpecificMaxWandSupply(_wandStatus, _wandType, 1);
+            addSpecificMaxWandSupply(_wandStatus, _wandType, 1);
 
-        if (_wandStatus == 0) {
-            _wandStatusIndex = rareCurrentSupply + 1;
-            _wandTypeIndex = currentRareWandSupply[_wandType] + 1;
-            _baseEndurance = rareBaseStat[0];
-            _baseAttack = rareBaseStat[1];
-        } else if (_wandStatus == 1) {
-            _wandStatusIndex = commonCurrentSupply + 1;
-            _wandTypeIndex = currentCommonWandSupply[_wandType] + 1;
-            _baseEndurance = commonBaseStat[0];
-            _baseAttack = commonBaseStat[1];
-        } else {
-            _wandStatusIndex = upgradeCurrentSupply + 1;
-            _wandTypeIndex = currentSpecificUpgradeWandSupply[_wandStatus][_wandType] + 1;
-            _baseEndurance = upgradeBaseStat[0];
-            _baseAttack = upgradeBaseStat[1];
+            if (_wandStatus == 0) {
+                _wandStatusIndex = rareCurrentSupply + 1;
+                _wandTypeIndex = currentRareWandSupply[_wandType] + 1;
+                _baseEndurance = rareBaseStat[0];
+                _baseAttack = rareBaseStat[1];
+            } else if (_wandStatus == 1) {
+                _wandStatusIndex = commonCurrentSupply + 1;
+                _wandTypeIndex = currentCommonWandSupply[_wandType] + 1;
+                _baseEndurance = commonBaseStat[0];
+                _baseAttack = commonBaseStat[1];
+            } else {
+                _wandStatusIndex = upgradeCurrentSupply + 1;
+                _wandTypeIndex = currentSpecificUpgradeWandSupply[_wandStatus][_wandType] + 1;
+                _baseEndurance = upgradeBaseStat[0];
+                _baseAttack = upgradeBaseStat[1];
+            }
+
+            uint256[2] memory _currentSupplyInfo = [_wandStatusIndex, _wandTypeIndex];
+
+            _createWand(
+                _currentSupplyInfo,
+                _wandStatus,
+                _wandType,
+                0,
+                _baseEndurance,
+                _baseAttack
+            );
+
+            if (_wandStatus == 0) {
+                rareCurrentSupply += 1;
+                currentRareWandSupply[_wandType] += 1;
+            } else if (_wandStatus == 1) {
+                commonCurrentSupply += 1;
+                currentCommonWandSupply[_wandType] += 1;
+            } else {
+                upgradeCurrentSupply += 1;
+                currentSpecificUpgradeWandSupply[_wandStatus][_wandType] += 1;
+            }
+
+            _safeMint(_owner[i]);
         }
-
-        uint256[2] memory _currentSupplyInfo = [_wandStatusIndex, _wandTypeIndex];
-
-        _createWand(
-            _currentSupplyInfo,
-            _wandStatus,
-            _wandType,
-            0,
-            _baseEndurance,
-            _baseAttack
-        );
-
-        if (_wandStatus == 0) {
-            rareCurrentSupply += 1;
-            currentRareWandSupply[_wandType] += 1;
-        } else if (_wandStatus == 1) {
-            commonCurrentSupply += 1;
-            currentCommonWandSupply[_wandType] += 1;
-        } else {
-            upgradeCurrentSupply += 1;
-            currentSpecificUpgradeWandSupply[_wandStatus][_wandType] += 1;
-        }
-
-        _safeMint(_owner);
     }
 
     function dropRandom(
