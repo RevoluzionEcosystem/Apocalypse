@@ -5464,10 +5464,12 @@ contract ApocalypseGame is Pausable, Auth {
             uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate1);
             uint256 recover = duration.div(durationHPRecover).mul(hpRecovery);
             apocCharacter.recoverHP(charSlot[_msgSender()].tokenID1, recover);
+            charSlot[_msgSender()].lastHPUpdate1 = block.timestamp;
         } else if (_slot == 2) {
             uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate2);
             uint256 recover = duration.div(durationHPRecover).mul(hpRecovery);
             apocCharacter.recoverHP(charSlot[_msgSender()].tokenID2, recover);
+            charSlot[_msgSender()].lastHPUpdate2 = block.timestamp;
         }
     }
 
@@ -5838,7 +5840,7 @@ contract ApocalypseGame is Pausable, Auth {
         }
     }
 
-    function fightSlot1() public whenNotPaused returns (bool, uint256, uint256){
+    function fightSlot1() public whenNotPaused returns (bool){
         
         checkHPRecovery(1);
 
@@ -5876,19 +5878,17 @@ contract ApocalypseGame is Pausable, Auth {
 
         uint256[3] memory rand = mixer(_charTokenID);
 
-        uint256 drop = checkDrop(rand[2], rand[1]);
-
         bool fightStatus = checkFight(_charTokenID, _charWeaponID, rand[0]);
 
         updateCharacter(fightStatus, charSlot[_msgSender()].tokenID1, _charShieldID);
 
         increaseSupply();
 
-        return (fightStatus, rand[1], drop);
+        return (fightStatus);
 
     }
 
-    function fightSlot2() public whenNotPaused returns (bool, uint256, uint256){
+    function fightSlot2() public whenNotPaused returns (bool){
 
         checkHPRecovery(2);
 
@@ -5926,15 +5926,13 @@ contract ApocalypseGame is Pausable, Auth {
 
         uint256[3] memory rand = mixer(_charTokenID);
 
-        uint256 drop = checkDrop(rand[2], rand[1]);
-
         bool fightStatus = checkFight(_charTokenID, _charWeaponID, rand[0]);
 
         updateCharacter(fightStatus, charSlot[_msgSender()].tokenID2, _charShieldID);
 
         increaseSupply();
 
-        return (fightStatus, rand[1], drop);
+        return (fightStatus);
 
     }
 
