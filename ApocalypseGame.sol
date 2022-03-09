@@ -2875,9 +2875,9 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
         weaponStatus = [0,1];
         weaponType = [1,2,3,4,5];
-        weaponAttack = [3,6,10,15,20,30,50,70,100,120];
+        weaponAttack = [2,4,8,10,15,20,25,30,40,50];
         weaponUpChance = [40,38,35,32,28,23,20,15,10,5];
-        weaponDepletion = [0,0,0,0,20,30,40,60,100,100];
+        weaponDepletion = [10,20,30,40,50,60,70,80,90,100];
         commonWeaponEndurance = [1000,1500,2000,2500,3000,3500,4000,4500,5000,10000];
 
         maxLevel = 10;
@@ -3697,9 +3697,9 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
 
         wandStatus = [0,1];
         wandType = [1,2,3,4,5];
-        wandAttack = [3,6,10,15,20,30,50,70,100,120];
+        wandAttack = [2,4,8,10,15,20,25,30,40,50];
         wandUpChance = [40,38,35,32,28,23,20,15,10,5];
-        wandDepletion = [0,0,0,0,20,30,40,60,100,100];
+        wandDepletion = [10,20,30,40,50,60,70,80,90,100];
         commonWandEndurance = [1000,1500,2000,2500,3000,3500,4000,4500,5000,10000];
 
         maxLevel = 10;
@@ -4519,9 +4519,9 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
         shieldStatus = [0,1];
         shieldType = [1,2];
-        shieldDefence = [2,4,8,10,15,20,30,40,50,100];
+        shieldDefence = [2,4,8,10,15,20,25,30,40,50];
         shieldUpChance = [40,38,35,32,28,23,20,15,10,5];
-        shieldDepletion = [10,10,20,30,40,50,60,80,100,100];
+        shieldDepletion = [10,20,30,40,50,60,70,80,90,100];
         commonShieldEndurance = [1000,1500,2000,2500,3000,3500,4000,4500,5000,10000];
 
         maxLevel = 10;
@@ -4531,10 +4531,10 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         
         rarePercentage = [5, 4];
 
-        addSpecificMaxShieldSupply(0, 1, 5); // 5 rare medusa
-        addSpecificMaxShieldSupply(0, 2, 5); // 5 rare devlin
+        addSpecificMaxShieldSupply(0, 0, 5); // 5 rare medusa
+        addSpecificMaxShieldSupply(0, 1, 5); // 5 rare devlin
 
-        addSpecificMaxShieldSupply(1, 1, 100000); // 100,000 universal tower
+        addSpecificMaxShieldSupply(1, 0, 100000); // 100,000 universal tower
 
         _createShield(
             [uint256(0),uint256(0)],
@@ -4621,6 +4621,8 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
     /* Default stats functions */
 
+    // Setter
+
     function setUpgradePercentage(uint256 _upgradeNumerator, uint256 _upgradePower) public authorized {
         require(_upgradeNumerator > 0 && _upgradePower > 0);
         upgradePercentage = [_upgradeNumerator, _upgradePower];
@@ -4635,6 +4637,21 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         require(_maxLevel > 0);
         maxLevel = _maxLevel;
         maxUpgradeStatus = _maxUpgradeStatus;
+    }
+
+    function setCommonBaseStat(uint256 _baseEndurance, uint256 _baseDefence) public authorized {
+        require(_baseEndurance > 0 && _baseDefence > 0);
+        commonBaseStat = [_baseEndurance, _baseDefence];
+    }
+
+    function setUpgradeBaseStat(uint256 _baseEndurance, uint256 _baseDefence) public authorized {
+        require(_baseEndurance > 0 && _baseDefence > 0);
+        upgradeBaseStat = [_baseEndurance, _baseDefence];
+    }
+
+    function setRareBaseStat(uint256 _baseEndurance, uint256 _baseDefence) public authorized {
+        require(_baseEndurance > 0 && _baseDefence > 0);
+        rareBaseStat = [_baseEndurance, _baseDefence];
     }
     
     function addCommonShieldEndurance(uint256[] memory _commonShieldEndurance) public authorized {
@@ -4672,39 +4689,36 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
             shieldDepletion.push(_shieldDepletion[i]);
         }
     }
+
+    function addShieldStatus(uint256[] memory _statusID) public authorized {
+        for(uint256 i = 0; i < _statusID.length; i++){
+            shieldStatus.push(_statusID[i]);
+        }
+    }
+
+    function addShieldType(uint256[] memory _typeID) public authorized {
+        for(uint256 i = 0; i < _typeID.length; i++){
+            shieldType.push(_typeID[i]);
+        }
+    }
     
     function updateCommonShieldEndurance(uint256 _shieldLevel, uint256 _commonShieldEndurance) public authorized {
-        require(_shieldLevel != 0 && _shieldLevel < commonShieldEndurance.length && _commonShieldEndurance > 0);
+        require(_shieldLevel != 0 && _shieldLevel <= commonShieldEndurance.length && _commonShieldEndurance > 0);
         commonShieldEndurance[_shieldLevel - 1] = _commonShieldEndurance;
     }
     
-    function getCommonShieldEndurance(uint256 _shieldLevel) public view returns (uint256) {
-        require(_shieldLevel != 0 && _shieldLevel < commonShieldEndurance.length);
-        return commonShieldEndurance[_shieldLevel - 1];
-    }
-    
     function updateUpgradeShieldEndurance(uint256 _shieldLevel, uint256 _upgradeShieldEndurance) public authorized {
-        require(_shieldLevel != 0 && _shieldLevel < upgradeShieldEndurance.length && _upgradeShieldEndurance > 0);
+        require(_shieldLevel != 0 && _shieldLevel <= upgradeShieldEndurance.length && _upgradeShieldEndurance > 0);
         upgradeShieldEndurance[_shieldLevel - 1] = _upgradeShieldEndurance;
     }
     
-    function getUpgradeShieldEndurance(uint256 _shieldLevel) public view returns (uint256) {
-        require(_shieldLevel != 0 && _shieldLevel < upgradeShieldEndurance.length);
-        return upgradeShieldEndurance[_shieldLevel - 1];
-    }
-    
     function updateRareShieldEndurance(uint256 _shieldLevel, uint256 _rareShieldEndurance) public authorized {
-        require(_shieldLevel != 0 && _shieldLevel < rareShieldEndurance.length && _rareShieldEndurance > 0);
+        require(_shieldLevel != 0 && _shieldLevel <= rareShieldEndurance.length && _rareShieldEndurance > 0);
         rareShieldEndurance[_shieldLevel - 1] = _rareShieldEndurance;
     }
-    
-    function getRareShieldEndurance(uint256 _shieldLevel) public view returns (uint256) {
-        require(_shieldLevel != 0 && _shieldLevel < rareShieldEndurance.length);
-        return rareShieldEndurance[_shieldLevel - 1];
-    }
-    
+
     function updateShieldDefence(uint256 _shieldLevel, uint256 _shieldDefence) public authorized {
-        require(_shieldLevel != 0 && _shieldLevel < shieldDefence.length && _shieldDefence > 0);
+        require(_shieldLevel != 0 && _shieldLevel <= shieldDefence.length && _shieldDefence > 0);
         shieldDefence[_shieldLevel - 1] = _shieldDefence;
     }
     
@@ -4718,43 +4732,43 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         shieldDepletion[_shieldLevel] = _shieldDepletion;
     }
 
-    function setCommonBaseStat(uint256 _baseEndurance, uint256 _baseDefence) public authorized {
-        require(_baseEndurance > 0 && _baseDefence > 0);
-        commonBaseStat = [_baseEndurance, _baseDefence];
+    // Getter
+    
+    function getCommonShieldEndurance(uint256 _shieldLevel) public view returns (uint256) {
+        require(_shieldLevel != 0 && _shieldLevel <= commonShieldEndurance.length);
+        return commonShieldEndurance[_shieldLevel - 1];
+    }
+    
+    function getUpgradeShieldEndurance(uint256 _shieldLevel) public view returns (uint256) {
+        require(_shieldLevel != 0 && _shieldLevel <= upgradeShieldEndurance.length);
+        return upgradeShieldEndurance[_shieldLevel - 1];
+    }
+    
+    function getRareShieldEndurance(uint256 _shieldLevel) public view returns (uint256) {
+        require(_shieldLevel != 0 && _shieldLevel <= rareShieldEndurance.length);
+        return rareShieldEndurance[_shieldLevel - 1];
+    }
+    
+    function getShieldUpChance(uint256 _shieldLevel) public view returns (uint256) {
+        require(_shieldLevel < shieldUpChance.length);
+        return shieldUpChance[_shieldLevel];
+    }
+
+    function getShieldDepletion(uint256 _shieldLevel) public view returns (uint256) {
+        require(_shieldLevel < shieldDepletion.length);
+        return shieldDepletion[_shieldLevel];
     }
 
     function getCommonBaseStat() public view returns (uint256[2] memory) {
         return commonBaseStat;
     }
 
-    function setUpgradeBaseStat(uint256 _baseEndurance, uint256 _baseDefence) public authorized {
-        require(_baseEndurance > 0 && _baseDefence > 0);
-        upgradeBaseStat = [_baseEndurance, _baseDefence];
-    }
-
     function getUpgradeBaseStat() public view returns (uint256[2] memory) {
         return upgradeBaseStat;
     }
 
-    function setRareBaseStat(uint256 _baseEndurance, uint256 _baseDefence) public authorized {
-        require(_baseEndurance > 0 && _baseDefence > 0);
-        rareBaseStat = [_baseEndurance, _baseDefence];
-    }
-
     function getRareBaseStat() public view returns (uint256[2] memory) {
         return rareBaseStat;
-    }
-
-    function addShieldStatus(uint256[] memory _statusID) public authorized {
-        for(uint256 i = 0; i < _statusID.length; i++){
-            shieldStatus.push(_statusID[i]);
-        }
-    }
-
-    function addShieldType(uint256[] memory _typeID) public authorized {
-        for(uint256 i = 0; i < _typeID.length; i++){
-            shieldType.push(_typeID[i]);
-        }
     }
 
     /* Shield attributes functions */
@@ -4898,6 +4912,10 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         emit MintNewShield(to, tokenId);
     }
 
+    function _burnLevelUp(uint256 _tokenID) external whenNotPaused authorized {
+        _burnUpgrade(_tokenID);
+    }
+
     /* NFT upgrade logic functions */
 
     function _burnUpgrade(uint256 _tokenID) internal {
@@ -4916,7 +4934,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
     }
 
-    function upgradeShield(address _owner, uint256 _tokenID1, uint256 _tokenID2, uint256 _nextStatus) external whenNotPaused authorized returns (bool, uint256) {
+    function upgradeShield(address _owner, uint256 _tokenID1, uint256 _tokenID2) external whenNotPaused authorized returns (bool, uint256) {
         require(
             apocShield[_tokenID1].shieldStatus <= maxUpgradeStatus &&
             apocShield[_tokenID2].shieldStatus <= maxUpgradeStatus &&
@@ -4924,6 +4942,7 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         );
 
         uint256 _shieldType = apocShield[_tokenID1].shieldType;
+        uint256 _nextStatus = apocShield[_tokenID1].shieldStatus + 1;
 
         uint256 userAddress = uint256(uint160(_msgSender()));
         uint256 targetBlock = block.number + (upgradePercentage[1]/upgradePercentage[0]);
@@ -5075,58 +5094,59 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
     /* NFT drop logic functions */
 
     function dropSpecific(
-        address _owner,
+        address[] memory _owner,
         uint256 _shieldStatus,
         uint256 _shieldType
     ) external whenNotPaused onlyOwner {
-        
-        uint256 _shieldStatusIndex;
-        uint256 _shieldTypeIndex;
-        uint256 _baseEndurance;
-        uint256 _baseDefence;
+        for(uint256 i = 0; i < _owner.length; i++) {
+            uint256 _shieldStatusIndex;
+            uint256 _shieldTypeIndex;
+            uint256 _baseEndurance;
+            uint256 _baseDefence;
 
-        addSpecificMaxShieldSupply(_shieldStatus, _shieldType, 1);
+            addSpecificMaxShieldSupply(_shieldStatus, _shieldType, 1);
 
-        if (_shieldStatus == 0) {
-            _shieldStatusIndex = rareCurrentSupply + 1;
-            _shieldTypeIndex = currentRareShieldSupply[_shieldType] + 1;
-            _baseEndurance = rareBaseStat[0];
-            _baseDefence = rareBaseStat[1];
-        } else if (_shieldStatus == 1) {
-            _shieldStatusIndex = commonCurrentSupply + 1;
-            _shieldTypeIndex = currentCommonShieldSupply[_shieldType] + 1;
-            _baseEndurance = commonBaseStat[0];
-            _baseDefence = commonBaseStat[1];
-        } else {
-            _shieldStatusIndex = upgradeCurrentSupply + 1;
-            _shieldTypeIndex = currentSpecificUpgradeShieldSupply[_shieldStatus][_shieldType] + 1;
-            _baseEndurance = upgradeBaseStat[0];
-            _baseDefence = upgradeBaseStat[1];
+            if (_shieldStatus == 0) {
+                _shieldStatusIndex = rareCurrentSupply + 1;
+                _shieldTypeIndex = currentRareShieldSupply[_shieldType] + 1;
+                _baseEndurance = rareBaseStat[0];
+                _baseDefence = rareBaseStat[1];
+            } else if (_shieldStatus == 1) {
+                _shieldStatusIndex = commonCurrentSupply + 1;
+                _shieldTypeIndex = currentCommonShieldSupply[_shieldType] + 1;
+                _baseEndurance = commonBaseStat[0];
+                _baseDefence = commonBaseStat[1];
+            } else {
+                _shieldStatusIndex = upgradeCurrentSupply + 1;
+                _shieldTypeIndex = currentSpecificUpgradeShieldSupply[_shieldStatus][_shieldType] + 1;
+                _baseEndurance = upgradeBaseStat[0];
+                _baseDefence = upgradeBaseStat[1];
+            }
+
+            uint256[2] memory _currentSupplyInfo = [_shieldStatusIndex, _shieldTypeIndex];
+
+            _createShield(
+                _currentSupplyInfo,
+                _shieldStatus,
+                _shieldType,
+                0,
+                _baseEndurance,
+                _baseDefence
+            );
+
+            if (_shieldStatus == 0) {
+                rareCurrentSupply += 1;
+                currentRareShieldSupply[_shieldType] += 1;
+            } else if (_shieldStatus == 1) {
+                commonCurrentSupply += 1;
+                currentCommonShieldSupply[_shieldType] += 1;
+            } else {
+                upgradeCurrentSupply += 1;
+                currentSpecificUpgradeShieldSupply[_shieldStatus][_shieldType] += 1;
+            }
+
+            _safeMint(_owner[i]);
         }
-
-        uint256[2] memory _currentSupplyInfo = [_shieldStatusIndex, _shieldTypeIndex];
-
-        _createShield(
-            _currentSupplyInfo,
-            _shieldStatus,
-            _shieldType,
-            0,
-            _baseEndurance,
-            _baseDefence
-        );
-
-        if (_shieldStatus == 0) {
-            rareCurrentSupply += 1;
-            currentRareShieldSupply[_shieldType] += 1;
-        } else if (_shieldStatus == 1) {
-            commonCurrentSupply += 1;
-            currentCommonShieldSupply[_shieldType] += 1;
-        } else {
-            upgradeCurrentSupply += 1;
-            currentSpecificUpgradeShieldSupply[_shieldStatus][_shieldType] += 1;
-        }
-
-        _safeMint(_owner);
     }
 
     function dropRandom(
