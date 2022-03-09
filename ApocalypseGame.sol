@@ -3153,6 +3153,11 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         apocWeapon[_tokenID].weaponLevel += 1;
     }
 
+    function updateEndurance(uint256 _tokenID, uint256 _updateEndurance) external whenNotPaused authorized {
+        require (_updateEndurance > 0);
+        apocWeapon[_tokenID].weaponEndurance = _updateEndurance;
+    }
+
     function reduceEndurance(uint256 _tokenID, uint256 _reduceEndurance) external whenNotPaused authorized {
         require (apocWeapon[_tokenID].weaponEndurance > 0);
         if (apocWeapon[_tokenID].weaponEndurance <= _reduceEndurance) {
@@ -3975,6 +3980,11 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         apocWand[_tokenID].wandLevel += 1;
     }
 
+    function updateEndurance(uint256 _tokenID, uint256 _updateEndurance) external whenNotPaused authorized {
+        require (_updateEndurance > 0);
+        apocWand[_tokenID].wandEndurance = _updateEndurance;
+    }
+
     function reduceEndurance(uint256 _tokenID, uint256 _reduceEndurance) external whenNotPaused authorized {
         require (apocWand[_tokenID].wandEndurance > 0);
         if (apocWand[_tokenID].wandEndurance <= _reduceEndurance) {
@@ -4783,6 +4793,11 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
     function levelUp(uint256 _tokenID) external whenNotPaused authorized {
         require(apocShield[_tokenID].shieldLevel < maxLevel);
         apocShield[_tokenID].shieldLevel += 1;
+    }
+
+    function updateEndurance(uint256 _tokenID, uint256 _updateEndurance) external whenNotPaused authorized {
+        require (_updateEndurance > 0);
+        apocShield[_tokenID].shieldEndurance = _updateEndurance;
     }
 
     function reduceEndurance(uint256 _tokenID, uint256 _reduceEndurance) external whenNotPaused authorized {
@@ -6195,12 +6210,17 @@ contract ApocalypseMediator is Pausable, Auth {
         uint256 amount = checkPrice(fee, upgradeCharacterToken);
         upgradeCharacterToken.transferFrom(_msgSender(), address(upgradeCharacterToken), amount);
 
+        apocCharacter.updateNextXP(_tokenID);
         apocCharacter.levelUp(_tokenID);
     }
 
     function levelUpWeapon(uint256 _tokenID) external whenNotPaused {
         require(_msgSender() == apocWeapon.ownerOf(_tokenID));
         uint256 amount = checkPrice(weaponLevelUpBUSDPrice, levelUpWeaponToken);
+        uint256 level = apocWeapon.getWeaponLevel(_tokenID);
+        uint256 upChance = apocWeapon.getWeaponUpChance(level);
+        uint256 depletion = apocWeapon.getWeaponDepletion(level);
+        
         levelUpWeaponToken.transferFrom(_msgSender(), address(levelUpWeaponToken), amount);
         apocWeapon.levelUp(_tokenID);
     }
