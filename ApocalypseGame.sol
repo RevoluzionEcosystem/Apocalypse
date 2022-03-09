@@ -5458,7 +5458,7 @@ contract ApocalypseGame is Pausable, Auth {
         apocCharacter.addSpecificMaxCharSupply(1, 1, 4, maxSupplyIncrease); // fire mages
     }
 
-    function recoverHP(uint256 _slot) internal {
+    function recoverHP(uint256 _slot) public {
 
         if (_slot == 1) {
             uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate1);
@@ -5480,11 +5480,11 @@ contract ApocalypseGame is Pausable, Auth {
         return success.add(totalAttack.mul(failure).div(200));
     }
 
-    function getHPRequired(uint256 _tokenID) internal view returns(uint256) {
+    function getHPRequired(uint256 _tokenID) public view returns(uint256) {
         return (apocCharacter.getCharLevel(_tokenID).sub(1)).mul(10).add(hpRequireBase);
     }
 
-    function getXPGain(uint256 _tokenID) internal view returns(uint256) {
+    function getXPGain(uint256 _tokenID) public view returns(uint256) {
         return (apocCharacter.getCharLevel(_tokenID).sub(1)).mul(2).add(xpGainBase);
     }
 
@@ -5991,6 +5991,8 @@ contract ApocalypseMediator is Pausable, Auth {
 
     uint256 public xpGainBase;
 
+    uint256[2] public charLevelUpTax;
+
 
     /** CONSTRUCTOR **/
     constructor(
@@ -6028,6 +6030,8 @@ contract ApocalypseMediator is Pausable, Auth {
 
         maxUpgradeStatus = 2;
         xpGainBase = 10;
+
+        charLevelUpTax = [2500, 4];
 
         characterUpgradeBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
         weaponLevelUpBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
@@ -6107,6 +6111,11 @@ contract ApocalypseMediator is Pausable, Auth {
 
     /* Default stats functions */
 
+    function setCharLevelUpTax(uint256 _taxNumerator, uint256 _taxPower) public authorized {
+        require(_taxNumerator > 0 && _taxPower > 0);
+        charLevelUpTax = [_taxNumerator, _taxPower];
+    }
+
     function setMaxUpgradeStatus(uint256 _maxUpgradeStatus) public onlyOwner {
         require(_maxUpgradeStatus > 0);
         maxUpgradeStatus = _maxUpgradeStatus;
@@ -6151,7 +6160,7 @@ contract ApocalypseMediator is Pausable, Auth {
         return router.getAmountsIn(_priceBUSD, path)[0];
     }
 
-    function getXPGain(uint256 _tokenID) internal view returns(uint256) {
+    function getXPGain(uint256 _tokenID) public view returns(uint256) {
         return (apocCharacter.getCharLevel(_tokenID).sub(1)).mul(2).add(xpGainBase);
     }
 
