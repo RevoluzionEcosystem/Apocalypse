@@ -6287,7 +6287,7 @@ contract ApocalypseMediator is Pausable, Auth {
         uint256 checkBurn = randomizer.sliceNumber(random, 10, 2, depletion/upChance);
 
         if (checkLevelUp > upChance && checkBurn <= depletion) {
-            apocapocShieldShield._burnLevelUp(_tokenID);
+            apocShield._burnLevelUp(_tokenID);
             return;
         } else if (checkLevelUp > upChance && checkBurn > depletion) {
             return;
