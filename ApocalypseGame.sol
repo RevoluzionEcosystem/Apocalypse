@@ -2831,10 +2831,6 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
     uint256[] public weaponUpChance;
     uint256[] public weaponDepletion;
 
-    uint256[] public commonWeaponEndurance;
-    uint256[] public upgradeWeaponEndurance;
-    uint256[] public rareWeaponEndurance;
-
     uint256[2] public upgradePercentage;
     uint256[2] public rarePercentage;
     uint256[2] public commonBaseStat;
@@ -2878,7 +2874,6 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         weaponAttack = [2,4,8,10,15,20,25,30,40,50];
         weaponUpChance = [40,38,35,32,28,23,20,15,10,5];
         weaponDepletion = [10,20,30,40,50,60,70,80,90,100];
-        commonWeaponEndurance = [1000,1500,2000,2500,3000,3500,4000,4500,5000,10000];
 
         maxLevel = 10;
 
@@ -3017,24 +3012,6 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         rareBaseStat = [_baseEndurance, _baseAttack];
     }
     
-    function addCommonWeaponEndurance(uint256[] memory _commonWeaponEndurance) public authorized {
-        for(uint256 i = 0; i < _commonWeaponEndurance.length; i++){
-            commonWeaponEndurance.push(_commonWeaponEndurance[i]);
-        }
-    }
-    
-    function addUpgradeWeaponEndurance(uint256[] memory _upgradeWeaponEndurance) public authorized {
-        for(uint256 i = 0; i < _upgradeWeaponEndurance.length; i++){
-            upgradeWeaponEndurance.push(_upgradeWeaponEndurance[i]);
-        }
-    }
-    
-    function addRareWeaponEndurance(uint256[] memory _rareWeaponEndurance) public authorized {
-        for(uint256 i = 0; i < _rareWeaponEndurance.length; i++){
-            rareWeaponEndurance.push(_rareWeaponEndurance[i]);
-        }
-    }
-    
     function addWeaponAttack(uint256[] memory _weaponAttack) public authorized {
         for(uint256 i = 0; i < _weaponAttack.length; i++){
             weaponAttack.push(_weaponAttack[i]);
@@ -3065,21 +3042,6 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         }
     }
     
-    function updateCommonWeaponEndurance(uint256 _weaponLevel, uint256 _commonWeaponEndurance) public authorized {
-        require(_weaponLevel != 0 && _weaponLevel <= commonWeaponEndurance.length && _commonWeaponEndurance > 0);
-        commonWeaponEndurance[_weaponLevel - 1] = _commonWeaponEndurance;
-    }
-    
-    function updateUpgradeWeaponEndurance(uint256 _weaponLevel, uint256 _upgradeWeaponEndurance) public authorized {
-        require(_weaponLevel != 0 && _weaponLevel <= upgradeWeaponEndurance.length && _upgradeWeaponEndurance > 0);
-        upgradeWeaponEndurance[_weaponLevel - 1] = _upgradeWeaponEndurance;
-    }
-    
-    function updateRareWeaponEndurance(uint256 _weaponLevel, uint256 _rareWeaponEndurance) public authorized {
-        require(_weaponLevel != 0 && _weaponLevel <= rareWeaponEndurance.length && _rareWeaponEndurance > 0);
-        rareWeaponEndurance[_weaponLevel - 1] = _rareWeaponEndurance;
-    }
-    
     function updateWeaponAttack(uint256 _weaponLevel, uint256 _weaponAttack) public authorized {
         require(_weaponLevel != 0 && _weaponLevel <= weaponAttack.length && _weaponAttack > 0);
         weaponAttack[_weaponLevel - 1] = _weaponAttack;
@@ -3096,21 +3058,6 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
     }
 
     // Getter
-
-    function getCommonWeaponEndurance(uint256 _weaponLevel) public view returns (uint256) {
-        require(_weaponLevel != 0 && _weaponLevel <= commonWeaponEndurance.length);
-        return commonWeaponEndurance[_weaponLevel - 1];
-    }
-
-    function getUpgradeWeaponEndurance(uint256 _weaponLevel) public view returns (uint256) {
-        require(_weaponLevel != 0 && _weaponLevel <= upgradeWeaponEndurance.length);
-        return upgradeWeaponEndurance[_weaponLevel - 1];
-    }
-
-    function getRareWeaponEndurance(uint256 _weaponLevel) public view returns (uint256) {
-        require(_weaponLevel != 0 && _weaponLevel <= rareWeaponEndurance.length);
-        return rareWeaponEndurance[_weaponLevel - 1];
-    }
     
     function getWeaponAttack(uint256 _weaponLevel) public view returns (uint256) {
         require(_weaponLevel != 0 && _weaponLevel <= weaponAttack.length);
@@ -3153,6 +3100,11 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         apocWeapon[_tokenID].weaponLevel += 1;
     }
 
+    function updateAttack(uint256 _tokenID, uint256 _attack) external whenNotPaused authorized {
+        require (_attack > 0);
+        apocWeapon[_tokenID].baseAttack = _attack;
+    }
+
     function updateEndurance(uint256 _tokenID, uint256 _updateEndurance) external whenNotPaused authorized {
         require (_updateEndurance > 0);
         apocWeapon[_tokenID].weaponEndurance = _updateEndurance;
@@ -3168,32 +3120,20 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
     }
 
     function recoverEndurance(uint256 _tokenID, uint256 _recoverEndurance) external whenNotPaused authorized {
-        if (apocWeapon[_tokenID].weaponStatus == 0 && apocWeapon[_tokenID].weaponLevel == 0) {
+        if (apocWeapon[_tokenID].weaponStatus == 0) {
             require (apocWeapon[_tokenID].weaponEndurance < rareBaseStat[0]);
-        } else if (apocWeapon[_tokenID].weaponStatus == 0 && apocWeapon[_tokenID].weaponLevel > 0) {
-            require (apocWeapon[_tokenID].weaponEndurance < rareWeaponEndurance[apocWeapon[_tokenID].weaponLevel - 1]);
-        } else if (apocWeapon[_tokenID].weaponStatus == 1 && apocWeapon[_tokenID].weaponLevel == 0) {
+        } else if (apocWeapon[_tokenID].weaponStatus == 1) {
             require (apocWeapon[_tokenID].weaponEndurance < commonBaseStat[0]);
-        } else if (apocWeapon[_tokenID].weaponStatus == 1 && apocWeapon[_tokenID].weaponLevel > 0) {
-            require (apocWeapon[_tokenID].weaponEndurance < commonWeaponEndurance[apocWeapon[_tokenID].weaponLevel - 1]);
-        } else if (apocWeapon[_tokenID].weaponStatus > 1 && apocWeapon[_tokenID].weaponLevel == 0) {
+        } else if (apocWeapon[_tokenID].weaponStatus > 1) {
             require (apocWeapon[_tokenID].weaponEndurance < upgradeBaseStat[0]);
-        } else if (apocWeapon[_tokenID].weaponStatus > 1 && apocWeapon[_tokenID].weaponLevel > 0) {
-            require (apocWeapon[_tokenID].weaponEndurance < upgradeWeaponEndurance[apocWeapon[_tokenID].weaponLevel - 1]);
         }
 
-        if (apocWeapon[_tokenID].weaponStatus == 0 && apocWeapon[_tokenID].weaponLevel == 0 && apocWeapon[_tokenID].weaponEndurance + _recoverEndurance >= rareBaseStat[0]) {
+        if (apocWeapon[_tokenID].weaponStatus == 0 && apocWeapon[_tokenID].weaponEndurance + _recoverEndurance >= rareBaseStat[0]) {
             apocWeapon[_tokenID].weaponEndurance = rareBaseStat[0];
-        } else if (apocWeapon[_tokenID].weaponStatus == 0 && apocWeapon[_tokenID].weaponLevel > 0 && apocWeapon[_tokenID].weaponEndurance + _recoverEndurance >= rareWeaponEndurance[apocWeapon[_tokenID].weaponLevel - 1]) {
-            apocWeapon[_tokenID].weaponEndurance = rareWeaponEndurance[apocWeapon[_tokenID].weaponLevel - 1];
-        } else if (apocWeapon[_tokenID].weaponStatus == 1 && apocWeapon[_tokenID].weaponLevel == 0 && apocWeapon[_tokenID].weaponEndurance + _recoverEndurance >= commonBaseStat[0]) {
+        } else if (apocWeapon[_tokenID].weaponStatus == 1 && apocWeapon[_tokenID].weaponEndurance + _recoverEndurance >= commonBaseStat[0]) {
             apocWeapon[_tokenID].weaponEndurance = commonBaseStat[0];
-        } else if (apocWeapon[_tokenID].weaponStatus == 1 && apocWeapon[_tokenID].weaponLevel > 0 && apocWeapon[_tokenID].weaponEndurance + _recoverEndurance >= commonWeaponEndurance[apocWeapon[_tokenID].weaponLevel - 1]) {
-            apocWeapon[_tokenID].weaponEndurance = commonWeaponEndurance[apocWeapon[_tokenID].weaponLevel - 1];
-        } else if (apocWeapon[_tokenID].weaponStatus > 1 && apocWeapon[_tokenID].weaponLevel == 0 && apocWeapon[_tokenID].weaponEndurance + _recoverEndurance >= upgradeBaseStat[0]) {
+        } else if (apocWeapon[_tokenID].weaponStatus > 1 && apocWeapon[_tokenID].weaponEndurance + _recoverEndurance >= upgradeBaseStat[0]) {
             apocWeapon[_tokenID].weaponEndurance = upgradeBaseStat[0];
-        } else if (apocWeapon[_tokenID].weaponStatus > 1 && apocWeapon[_tokenID].weaponLevel > 0 && apocWeapon[_tokenID].weaponEndurance + _recoverEndurance >= upgradeWeaponEndurance[apocWeapon[_tokenID].weaponLevel - 1]) {
-            apocWeapon[_tokenID].weaponEndurance = upgradeWeaponEndurance[apocWeapon[_tokenID].weaponLevel - 1];
         } else {
             apocWeapon[_tokenID].weaponEndurance += _recoverEndurance;
         }
@@ -3658,10 +3598,6 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
     uint256[] public wandUpChance;
     uint256[] public wandDepletion;
 
-    uint256[] public commonWandEndurance;
-    uint256[] public upgradeWandEndurance;
-    uint256[] public rareWandEndurance;
-
     uint256[2] public upgradePercentage;
     uint256[2] public rarePercentage;
     uint256[2] public commonBaseStat;
@@ -3705,7 +3641,6 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         wandAttack = [2,4,8,10,15,20,25,30,40,50];
         wandUpChance = [40,38,35,32,28,23,20,15,10,5];
         wandDepletion = [10,20,30,40,50,60,70,80,90,100];
-        commonWandEndurance = [1000,1500,2000,2500,3000,3500,4000,4500,5000,10000];
 
         maxLevel = 10;
 
@@ -3844,24 +3779,6 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         rareBaseStat = [_baseEndurance, _baseAttack];
     }
     
-    function addCommonWandEndurance(uint256[] memory _commonWandEndurance) public authorized {
-        for(uint256 i = 0; i < _commonWandEndurance.length; i++){
-            commonWandEndurance.push(_commonWandEndurance[i]);
-        }
-    }
-    
-    function addUpgradeWandEndurance(uint256[] memory _upgradeWandEndurance) public authorized {
-        for(uint256 i = 0; i < _upgradeWandEndurance.length; i++){
-            upgradeWandEndurance.push(_upgradeWandEndurance[i]);
-        }
-    }
-    
-    function addRareWandEndurance(uint256[] memory _rareWandEndurance) public authorized {
-        for(uint256 i = 0; i < _rareWandEndurance.length; i++){
-            rareWandEndurance.push(_rareWandEndurance[i]);
-        }
-    }
-    
     function addWandAttack(uint256[] memory _wandAttack) public authorized {
         for(uint256 i = 0; i < _wandAttack.length; i++){
             wandAttack.push(_wandAttack[i]);
@@ -3891,21 +3808,6 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
             wandType.push(_typeID[i]);
         }
     }
-    
-    function updateCommonWandEndurance(uint256 _wandLevel, uint256 _commonWandEndurance) public authorized {
-        require(_wandLevel != 0 && _wandLevel <= commonWandEndurance.length && _commonWandEndurance > 0);
-        commonWandEndurance[_wandLevel - 1] = _commonWandEndurance;
-    }
-    
-    function updateUpgradeWandEndurance(uint256 _wandLevel, uint256 _upgradeWandEndurance) public authorized {
-        require(_wandLevel != 0 && _wandLevel <= upgradeWandEndurance.length && _upgradeWandEndurance > 0);
-        upgradeWandEndurance[_wandLevel - 1] = _upgradeWandEndurance;
-    }
-    
-    function updateRareWandEndurance(uint256 _wandLevel, uint256 _rareWandEndurance) public authorized {
-        require(_wandLevel != 0 && _wandLevel <= rareWandEndurance.length && _rareWandEndurance > 0);
-        rareWandEndurance[_wandLevel - 1] = _rareWandEndurance;
-    }
 
     function updateWandAttack(uint256 _wandLevel, uint256 _wandAttack) public authorized {
         require(_wandLevel != 0 && _wandLevel <= wandAttack.length && _wandAttack > 0);
@@ -3923,21 +3825,6 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
     }
     
     // Getter
-    
-    function getCommonWandEndurance(uint256 _wandLevel) public view returns (uint256) {
-        require(_wandLevel != 0 && _wandLevel <= commonWandEndurance.length);
-        return commonWandEndurance[_wandLevel - 1];
-    }
-    
-    function getUpgradeWandEndurance(uint256 _wandLevel) public view returns (uint256) {
-        require(_wandLevel != 0 && _wandLevel <= upgradeWandEndurance.length);
-        return upgradeWandEndurance[_wandLevel - 1];
-    }
-    
-    function getRareWandEndurance(uint256 _wandLevel) public view returns (uint256) {
-        require(_wandLevel != 0 && _wandLevel <= rareWandEndurance.length);
-        return rareWandEndurance[_wandLevel - 1];
-    }
 
     function getWandAttack(uint256 _wandLevel) public view returns (uint256) {
         require(_wandLevel != 0 && _wandLevel <= wandAttack.length);
@@ -3980,6 +3867,11 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
         apocWand[_tokenID].wandLevel += 1;
     }
 
+    function updateAttack(uint256 _tokenID, uint256 _attack) external whenNotPaused authorized {
+        require (_attack > 0);
+        apocWand[_tokenID].baseAttack = _attack;
+    }
+
     function updateEndurance(uint256 _tokenID, uint256 _updateEndurance) external whenNotPaused authorized {
         require (_updateEndurance > 0);
         apocWand[_tokenID].wandEndurance = _updateEndurance;
@@ -3995,32 +3887,20 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
     }
 
     function recoverEndurance(uint256 _tokenID, uint256 _recoverEndurance) external whenNotPaused authorized {
-        if (apocWand[_tokenID].wandStatus == 0 && apocWand[_tokenID].wandLevel == 0) {
+        if (apocWand[_tokenID].wandStatus == 0) {
             require (apocWand[_tokenID].wandEndurance < rareBaseStat[0]);
-        } else if (apocWand[_tokenID].wandStatus == 0 && apocWand[_tokenID].wandLevel > 0) {
-            require (apocWand[_tokenID].wandEndurance < rareWandEndurance[apocWand[_tokenID].wandLevel - 1]);
-        } else if (apocWand[_tokenID].wandStatus == 1 && apocWand[_tokenID].wandLevel == 0) {
+        } else if (apocWand[_tokenID].wandStatus == 1) {
             require (apocWand[_tokenID].wandEndurance < commonBaseStat[0]);
-        } else if (apocWand[_tokenID].wandStatus == 1 && apocWand[_tokenID].wandLevel > 0) {
-            require (apocWand[_tokenID].wandEndurance < commonWandEndurance[apocWand[_tokenID].wandLevel - 1]);
-        } else if (apocWand[_tokenID].wandStatus > 1 && apocWand[_tokenID].wandLevel == 0) {
+        } else if (apocWand[_tokenID].wandStatus > 1) {
             require (apocWand[_tokenID].wandEndurance < upgradeBaseStat[0]);
-        } else if (apocWand[_tokenID].wandStatus > 1 && apocWand[_tokenID].wandLevel > 0) {
-            require (apocWand[_tokenID].wandEndurance < upgradeWandEndurance[apocWand[_tokenID].wandLevel - 1]);
         }
 
-        if (apocWand[_tokenID].wandStatus == 0 && apocWand[_tokenID].wandLevel == 0 && apocWand[_tokenID].wandEndurance + _recoverEndurance >= rareBaseStat[0]) {
+        if (apocWand[_tokenID].wandStatus == 0 && apocWand[_tokenID].wandEndurance + _recoverEndurance >= rareBaseStat[0]) {
             apocWand[_tokenID].wandEndurance = rareBaseStat[0];
-        } else if (apocWand[_tokenID].wandStatus == 0 && apocWand[_tokenID].wandLevel > 0 && apocWand[_tokenID].wandEndurance + _recoverEndurance >= rareWandEndurance[apocWand[_tokenID].wandLevel - 1]) {
-            apocWand[_tokenID].wandEndurance = rareWandEndurance[apocWand[_tokenID].wandLevel - 1];
-        } else if (apocWand[_tokenID].wandStatus == 1 && apocWand[_tokenID].wandLevel == 0 && apocWand[_tokenID].wandEndurance + _recoverEndurance >= commonBaseStat[0]) {
+        } else if (apocWand[_tokenID].wandStatus == 1 && apocWand[_tokenID].wandEndurance + _recoverEndurance >= commonBaseStat[0]) {
             apocWand[_tokenID].wandEndurance = commonBaseStat[0];
-        } else if (apocWand[_tokenID].wandStatus == 1 && apocWand[_tokenID].wandLevel > 0 && apocWand[_tokenID].wandEndurance + _recoverEndurance >= commonWandEndurance[apocWand[_tokenID].wandLevel - 1]) {
-            apocWand[_tokenID].wandEndurance = commonWandEndurance[apocWand[_tokenID].wandLevel - 1];
-        } else if (apocWand[_tokenID].wandStatus > 1 && apocWand[_tokenID].wandLevel == 0 && apocWand[_tokenID].wandEndurance + _recoverEndurance >= upgradeBaseStat[0]) {
+        } else if (apocWand[_tokenID].wandStatus > 1 && apocWand[_tokenID].wandEndurance + _recoverEndurance >= upgradeBaseStat[0]) {
             apocWand[_tokenID].wandEndurance = upgradeBaseStat[0];
-        } else if (apocWand[_tokenID].wandStatus > 1 && apocWand[_tokenID].wandLevel > 0 && apocWand[_tokenID].wandEndurance + _recoverEndurance >= upgradeWandEndurance[apocWand[_tokenID].wandLevel - 1]) {
-            apocWand[_tokenID].wandEndurance = upgradeWandEndurance[apocWand[_tokenID].wandLevel - 1];
         } else {
             apocWand[_tokenID].wandEndurance += _recoverEndurance;
         }
@@ -4485,10 +4365,6 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
     uint256[] public shieldUpChance;
     uint256[] public shieldDepletion;
 
-    uint256[] public commonShieldEndurance;
-    uint256[] public upgradeShieldEndurance;
-    uint256[] public rareShieldEndurance;
-
     uint256[2] public upgradePercentage;
     uint256[2] public rarePercentage;
     uint256[2] public commonBaseStat;
@@ -4532,7 +4408,6 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         shieldDefence = [2,4,8,10,15,20,25,30,40,50];
         shieldUpChance = [40,38,35,32,28,23,20,15,10,5];
         shieldDepletion = [10,20,30,40,50,60,70,80,90,100];
-        commonShieldEndurance = [1000,1500,2000,2500,3000,3500,4000,4500,5000,10000];
 
         maxLevel = 10;
 
@@ -4664,24 +4539,6 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         rareBaseStat = [_baseEndurance, _baseDefence];
     }
     
-    function addCommonShieldEndurance(uint256[] memory _commonShieldEndurance) public authorized {
-        for(uint256 i = 0; i < _commonShieldEndurance.length; i++){
-            commonShieldEndurance.push(_commonShieldEndurance[i]);
-        }
-    }
-    
-    function addUpgradeShieldEndurance(uint256[] memory _upgradeShieldEndurance) public authorized {
-        for(uint256 i = 0; i < _upgradeShieldEndurance.length; i++){
-            upgradeShieldEndurance.push(_upgradeShieldEndurance[i]);
-        }
-    }
-    
-    function addRareShieldEndurance(uint256[] memory _rareShieldEndurance) public authorized {
-        for(uint256 i = 0; i < _rareShieldEndurance.length; i++){
-            rareShieldEndurance.push(_rareShieldEndurance[i]);
-        }
-    }
-    
     function addShieldDefence(uint256[] memory _shieldDefence) public authorized {
         for(uint256 i = 0; i < _shieldDefence.length; i++){
             shieldDefence.push(_shieldDefence[i]);
@@ -4711,21 +4568,6 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
             shieldType.push(_typeID[i]);
         }
     }
-    
-    function updateCommonShieldEndurance(uint256 _shieldLevel, uint256 _commonShieldEndurance) public authorized {
-        require(_shieldLevel != 0 && _shieldLevel <= commonShieldEndurance.length && _commonShieldEndurance > 0);
-        commonShieldEndurance[_shieldLevel - 1] = _commonShieldEndurance;
-    }
-    
-    function updateUpgradeShieldEndurance(uint256 _shieldLevel, uint256 _upgradeShieldEndurance) public authorized {
-        require(_shieldLevel != 0 && _shieldLevel <= upgradeShieldEndurance.length && _upgradeShieldEndurance > 0);
-        upgradeShieldEndurance[_shieldLevel - 1] = _upgradeShieldEndurance;
-    }
-    
-    function updateRareShieldEndurance(uint256 _shieldLevel, uint256 _rareShieldEndurance) public authorized {
-        require(_shieldLevel != 0 && _shieldLevel <= rareShieldEndurance.length && _rareShieldEndurance > 0);
-        rareShieldEndurance[_shieldLevel - 1] = _rareShieldEndurance;
-    }
 
     function updateShieldDefence(uint256 _shieldLevel, uint256 _shieldDefence) public authorized {
         require(_shieldLevel != 0 && _shieldLevel <= shieldDefence.length && _shieldDefence > 0);
@@ -4743,20 +4585,10 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
     }
 
     // Getter
-    
-    function getCommonShieldEndurance(uint256 _shieldLevel) public view returns (uint256) {
-        require(_shieldLevel != 0 && _shieldLevel <= commonShieldEndurance.length);
-        return commonShieldEndurance[_shieldLevel - 1];
-    }
-    
-    function getUpgradeShieldEndurance(uint256 _shieldLevel) public view returns (uint256) {
-        require(_shieldLevel != 0 && _shieldLevel <= upgradeShieldEndurance.length);
-        return upgradeShieldEndurance[_shieldLevel - 1];
-    }
-    
-    function getRareShieldEndurance(uint256 _shieldLevel) public view returns (uint256) {
-        require(_shieldLevel != 0 && _shieldLevel <= rareShieldEndurance.length);
-        return rareShieldEndurance[_shieldLevel - 1];
+
+    function getShieldDefence(uint256 _shieldLevel) public view returns (uint256) {
+        require(_shieldLevel != 0 && _shieldLevel <= shieldDefence.length);
+        return shieldDefence[_shieldLevel - 1];
     }
     
     function getShieldUpChance(uint256 _shieldLevel) public view returns (uint256) {
@@ -4795,6 +4627,11 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
         apocShield[_tokenID].shieldLevel += 1;
     }
 
+    function updateDefence(uint256 _tokenID, uint256 _defence) external whenNotPaused authorized {
+        require (_defence > 0);
+        apocShield[_tokenID].baseDefence = _defence;
+    }
+
     function updateEndurance(uint256 _tokenID, uint256 _updateEndurance) external whenNotPaused authorized {
         require (_updateEndurance > 0);
         apocShield[_tokenID].shieldEndurance = _updateEndurance;
@@ -4810,32 +4647,20 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
     }
 
     function recoverEndurance(uint256 _tokenID, uint256 _recoverEndurance) external whenNotPaused authorized {
-        if (apocShield[_tokenID].shieldStatus == 0 && apocShield[_tokenID].shieldLevel == 0) {
+        if (apocShield[_tokenID].shieldStatus == 0) {
             require (apocShield[_tokenID].shieldEndurance < rareBaseStat[0]);
-        } else if (apocShield[_tokenID].shieldStatus == 0 && apocShield[_tokenID].shieldLevel > 0) {
-            require (apocShield[_tokenID].shieldEndurance < rareShieldEndurance[apocShield[_tokenID].shieldLevel - 1]);
-        } else if (apocShield[_tokenID].shieldStatus == 1 && apocShield[_tokenID].shieldLevel == 0) {
+        } else if (apocShield[_tokenID].shieldStatus == 1) {
             require (apocShield[_tokenID].shieldEndurance < commonBaseStat[0]);
-        } else if (apocShield[_tokenID].shieldStatus == 1 && apocShield[_tokenID].shieldLevel > 0) {
-            require (apocShield[_tokenID].shieldEndurance < commonShieldEndurance[apocShield[_tokenID].shieldLevel - 1]);
-        } else if (apocShield[_tokenID].shieldStatus > 1 && apocShield[_tokenID].shieldLevel == 0) {
+        } else if (apocShield[_tokenID].shieldStatus > 1) {
             require (apocShield[_tokenID].shieldEndurance < upgradeBaseStat[0]);
-        } else if (apocShield[_tokenID].shieldStatus > 1 && apocShield[_tokenID].shieldLevel > 0) {
-            require (apocShield[_tokenID].shieldEndurance < upgradeShieldEndurance[apocShield[_tokenID].shieldLevel - 1]);
         }
 
-        if (apocShield[_tokenID].shieldStatus == 0 && apocShield[_tokenID].shieldLevel == 0 && apocShield[_tokenID].shieldEndurance + _recoverEndurance >= rareBaseStat[0]) {
+        if (apocShield[_tokenID].shieldStatus == 0 && apocShield[_tokenID].shieldEndurance + _recoverEndurance >= rareBaseStat[0]) {
             apocShield[_tokenID].shieldEndurance = rareBaseStat[0];
-        } else if (apocShield[_tokenID].shieldStatus == 0 && apocShield[_tokenID].shieldLevel > 0 && apocShield[_tokenID].shieldEndurance + _recoverEndurance >= rareShieldEndurance[apocShield[_tokenID].shieldLevel - 1]) {
-            apocShield[_tokenID].shieldEndurance = rareShieldEndurance[apocShield[_tokenID].shieldLevel - 1];
-        } else if (apocShield[_tokenID].shieldStatus == 1 && apocShield[_tokenID].shieldLevel == 0 && apocShield[_tokenID].shieldEndurance + _recoverEndurance >= commonBaseStat[0]) {
+        } else if (apocShield[_tokenID].shieldStatus == 1 && apocShield[_tokenID].shieldEndurance + _recoverEndurance >= commonBaseStat[0]) {
             apocShield[_tokenID].shieldEndurance = commonBaseStat[0];
-        } else if (apocShield[_tokenID].shieldStatus == 1 && apocShield[_tokenID].shieldLevel > 0 && apocShield[_tokenID].shieldEndurance + _recoverEndurance >= commonShieldEndurance[apocShield[_tokenID].shieldLevel - 1]) {
-            apocShield[_tokenID].shieldEndurance = commonShieldEndurance[apocShield[_tokenID].shieldLevel - 1];
-        } else if (apocShield[_tokenID].shieldStatus > 1 && apocShield[_tokenID].shieldLevel == 0 && apocShield[_tokenID].shieldEndurance + _recoverEndurance >= upgradeBaseStat[0]) {
+        } else if (apocShield[_tokenID].shieldStatus > 1 && apocShield[_tokenID].shieldEndurance + _recoverEndurance >= upgradeBaseStat[0]) {
             apocShield[_tokenID].shieldEndurance = upgradeBaseStat[0];
-        } else if (apocShield[_tokenID].shieldStatus > 1 && apocShield[_tokenID].shieldLevel > 0 && apocShield[_tokenID].shieldEndurance + _recoverEndurance >= upgradeShieldEndurance[apocShield[_tokenID].shieldLevel - 1]) {
-            apocShield[_tokenID].shieldEndurance = upgradeShieldEndurance[apocShield[_tokenID].shieldLevel - 1];
         } else {
             apocShield[_tokenID].shieldEndurance += _recoverEndurance;
         }
@@ -6007,7 +5832,7 @@ contract ApocalypseMediator is Pausable, Auth {
 
     uint256 public xpGainBase;
 
-    uint256[2] public charLevelUpTax;
+    uint256 public charLevelUpTax;
 
 
     /** CONSTRUCTOR **/
@@ -6049,7 +5874,7 @@ contract ApocalypseMediator is Pausable, Auth {
         maxUpgradeStatus = 2;
         xpGainBase = 10;
 
-        charLevelUpTax = [2500, 4];
+        charLevelUpTax = 5;
 
         characterUpgradeBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
         weaponLevelUpBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
@@ -6136,9 +5961,9 @@ contract ApocalypseMediator is Pausable, Auth {
 
     /* Default stats functions */
 
-    function setCharLevelUpTax(uint256 _taxNumerator, uint256 _taxPower) public authorized {
-        require(_taxNumerator > 0 && _taxPower > 0);
-        charLevelUpTax = [_taxNumerator, _taxPower];
+    function setCharLevelUpTax(uint256 _tax) public authorized {
+        require(_tax > 1);
+        charLevelUpTax = _tax;
     }
 
     function setMaxUpgradeStatus(uint256 _maxUpgradeStatus) public onlyOwner {
@@ -6215,7 +6040,7 @@ contract ApocalypseMediator is Pausable, Auth {
             rounds += 1;
         }
         uint256 gain = rounds.mul(apocCharacter.getCharLevel(_tokenID));
-        uint256 fee = gain.mul(charLevelUpTax[0]).div(charLevelUpTax[1]);
+        uint256 fee = gain.div(charLevelUpTax);
         
         uint256 amount = checkPrice(fee, upgradeCharacterToken);
         upgradeCharacterToken.transferFrom(_msgSender(), address(upgradeCharacterToken), amount);
@@ -6245,6 +6070,8 @@ contract ApocalypseMediator is Pausable, Auth {
         } else {
             levelUpWeaponToken.transferFrom(_msgSender(), address(levelUpWeaponToken), amount);
             apocWeapon.levelUp(_tokenID);
+            uint256 weaponLevel = apocWeapon.getWeaponLevel(_tokenID);
+            apocWeapon.updateAttack(_tokenID, apocWeapon.getWeaponAttack(weaponLevel));
         }   
 
     }
@@ -6270,6 +6097,8 @@ contract ApocalypseMediator is Pausable, Auth {
         } else {
             levelUpWandToken.transferFrom(_msgSender(), address(levelUpWandToken), amount);
             apocWand.levelUp(_tokenID);
+            uint256 wandLevel = apocWand.getWandLevel(_tokenID);
+            apocWand.updateAttack(_tokenID, apocWand.getWandAttack(wandLevel));
         }   
     }
 
@@ -6294,6 +6123,8 @@ contract ApocalypseMediator is Pausable, Auth {
         } else {
             levelUpShieldToken.transferFrom(_msgSender(), address(levelUpShieldToken), amount);
             apocShield.levelUp(_tokenID);
+            uint256 shieldLevel = apocShield.getShieldLevel(_tokenID);
+            apocShield.updateDefence(_tokenID, apocShield.getShieldDefence(shieldLevel));
         }   
     }
 
@@ -6331,21 +6162,14 @@ contract ApocalypseMediator is Pausable, Auth {
         repairWeaponToken.transferFrom(_msgSender(), address(repairWeaponToken), amount);
 
         uint256 status = apocWeapon.getWeaponStatus(_tokenID);
-        uint256 level = apocWeapon.getWeaponLevel(_tokenID);
         
         uint256 _recoverEndurance;
 
-        if (status == 0 && level > 0) {
-            _recoverEndurance = apocWeapon.getRareWeaponEndurance(level);
-        } else if (status == 0 && level == 0) {
+        if (status == 0) {
             _recoverEndurance = apocWeapon.getRareBaseStat()[0];
-        } else if (status == 1 && level > 0) {
-            _recoverEndurance = apocWeapon.getCommonWeaponEndurance(level);
-        } else if (status == 1 && level == 0) {
+        } else if (status == 1) {
             _recoverEndurance = apocWeapon.getCommonBaseStat()[0];
-        } else if (status > 1 && level > 0) {
-            _recoverEndurance = apocWeapon.getUpgradeWeaponEndurance(level);
-        } else if (status > 1 && level == 0) {
+        } else if (status > 1) {
             _recoverEndurance = apocWeapon.getUpgradeBaseStat()[0];
         }
 
@@ -6358,21 +6182,14 @@ contract ApocalypseMediator is Pausable, Auth {
         repairWandToken.transferFrom(_msgSender(), address(repairWandToken), amount);
         
         uint256 status = apocWand.getWandStatus(_tokenID);
-        uint256 level = apocWand.getWandLevel(_tokenID);
         
         uint256 _recoverEndurance;
 
-        if (status == 0 && level > 0) {
-            _recoverEndurance = apocWand.getRareWandEndurance(level);
-        } else if (status == 0 && level == 0) {
+        if (status == 0) {
             _recoverEndurance = apocWand.getRareBaseStat()[0];
-        } else if (status == 1 && level > 0) {
-            _recoverEndurance = apocWand.getCommonWandEndurance(level);
-        } else if (status == 1 && level == 0) {
+        } else if (status == 1) {
             _recoverEndurance = apocWand.getCommonBaseStat()[0];
-        } else if (status > 1 && level > 0) {
-            _recoverEndurance = apocWand.getUpgradeWandEndurance(level);
-        } else if (status > 1 && level == 0) {
+        } else if (status > 1) {
             _recoverEndurance = apocWand.getUpgradeBaseStat()[0];
         }
 
@@ -6385,21 +6202,14 @@ contract ApocalypseMediator is Pausable, Auth {
         repairShieldToken.transferFrom(_msgSender(), address(repairShieldToken), amount);
         
         uint256 status = apocShield.getShieldStatus(_tokenID);
-        uint256 level = apocShield.getShieldLevel(_tokenID);
         
         uint256 _recoverEndurance;
 
-        if (status == 0 && level > 0) {
-            _recoverEndurance = apocShield.getRareShieldEndurance(level);
-        } else if (status == 0 && level == 0) {
+        if (status == 0) {
             _recoverEndurance = apocShield.getRareBaseStat()[0];
-        } else if (status == 1 && level > 0) {
-            _recoverEndurance = apocShield.getCommonShieldEndurance(level);
-        } else if (status == 1 && level == 0) {
+        } else if (status == 1) {
             _recoverEndurance = apocShield.getCommonBaseStat()[0];
-        } else if (status > 1 && level > 0) {
-            _recoverEndurance = apocShield.getUpgradeShieldEndurance(level);
-        } else if (status > 1 && level == 0) {
+        } else if (status > 1) {
             _recoverEndurance = apocShield.getUpgradeBaseStat()[0];
         }
 
