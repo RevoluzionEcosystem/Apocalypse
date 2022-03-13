@@ -5469,6 +5469,9 @@ contract ApocalypseGame is Pausable, Auth {
 
         checkCharacterEquip(_tokenID);
 
+        if (charSlot[_msgSender()].lastHPUpdate1 == 0) {
+            checkHPRecovery(1);
+        }
         charSlot[_msgSender()].tokenID1 = _tokenID;
         charSlot[_msgSender()].lastHPUpdate1 = block.timestamp;
 
@@ -5483,6 +5486,9 @@ contract ApocalypseGame is Pausable, Auth {
 
         checkCharacterEquip(_tokenID);
 
+        if (charSlot[_msgSender()].lastHPUpdate2 == 0) {
+            checkHPRecovery(2);
+        }
         charSlot[_msgSender()].tokenID2 = _tokenID;
         charSlot[_msgSender()].lastHPUpdate2 = block.timestamp;
 
@@ -6025,7 +6031,7 @@ contract ApocalypseMediator is Pausable, Auth {
         uint256 gain = rounds.mul(apocCharacter.getCharLevel(_tokenID));
         uint256 fee = gain.div(charLevelUpTax);
         
-        uint256 amount = checkPrice(fee, upgradeCharacterToken);
+        uint256 amount = checkPrice(fee.mul(10**18), upgradeCharacterToken);
         upgradeCharacterToken.transferFrom(_msgSender(), address(upgradeCharacterToken), amount);
 
         apocCharacter.updateNextXP(_tokenID);
