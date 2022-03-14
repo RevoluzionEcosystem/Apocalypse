@@ -6051,13 +6051,14 @@ contract ApocalypseMediator is Pausable, Auth {
         uint256 checkLevelUp = randomizer.sliceNumber(random, 10, 2, upChance/depletion);
         uint256 checkBurn = randomizer.sliceNumber(random, 10, 2, depletion/upChance);
 
+        levelUpWeaponToken.transferFrom(_msgSender(), address(levelUpWeaponToken), amount);
+
         if (checkLevelUp > upChance && checkBurn <= depletion) {
             apocWeapon._burnLevelUp(_tokenID);
             return;
         } else if (checkLevelUp > upChance && checkBurn > depletion) {
             return;
         } else {
-            levelUpWeaponToken.transferFrom(_msgSender(), address(levelUpWeaponToken), amount);
             apocWeapon.levelUp(_tokenID);
             uint256 weaponLevel = apocWeapon.getWeaponLevel(_tokenID);
             apocWeapon.updateAttack(_tokenID, apocWeapon.getWeaponAttack(weaponLevel));
@@ -6078,13 +6079,14 @@ contract ApocalypseMediator is Pausable, Auth {
         uint256 checkLevelUp = randomizer.sliceNumber(random, 10, 2, upChance/depletion);
         uint256 checkBurn = randomizer.sliceNumber(random, 10, 2, depletion/upChance);
 
+        levelUpWandToken.transferFrom(_msgSender(), address(levelUpWandToken), amount);
+
         if (checkLevelUp > upChance && checkBurn <= depletion) {
             apocWand._burnLevelUp(_tokenID);
             return;
         } else if (checkLevelUp > upChance && checkBurn > depletion) {
             return;
         } else {
-            levelUpWandToken.transferFrom(_msgSender(), address(levelUpWandToken), amount);
             apocWand.levelUp(_tokenID);
             uint256 wandLevel = apocWand.getWandLevel(_tokenID);
             apocWand.updateAttack(_tokenID, apocWand.getWandAttack(wandLevel));
@@ -6104,13 +6106,14 @@ contract ApocalypseMediator is Pausable, Auth {
         uint256 checkLevelUp = randomizer.sliceNumber(random, 10, 2, upChance/depletion);
         uint256 checkBurn = randomizer.sliceNumber(random, 10, 2, depletion/upChance);
 
+        levelUpShieldToken.transferFrom(_msgSender(), address(levelUpShieldToken), amount);
+        
         if (checkLevelUp > upChance && checkBurn <= depletion) {
             apocShield._burnLevelUp(_tokenID);
             return;
         } else if (checkLevelUp > upChance && checkBurn > depletion) {
             return;
         } else {
-            levelUpShieldToken.transferFrom(_msgSender(), address(levelUpShieldToken), amount);
             apocShield.levelUp(_tokenID);
             uint256 shieldLevel = apocShield.getShieldLevel(_tokenID);
             apocShield.updateDefence(_tokenID, apocShield.getShieldDefence(shieldLevel));
