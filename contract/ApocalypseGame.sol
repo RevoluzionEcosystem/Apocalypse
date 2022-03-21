@@ -5193,7 +5193,8 @@ contract ApocalypseGame is Pausable, Auth {
     event ChangeRewardToken(address caller, address prevRewardToken, address newRewardToken);
     event ChangeRandomizer(address caller, address prevRandomizer, address newRandomizer);
     event ChangeRewardPool(address caller, address prevRewardPool, address newRewardPool);
-
+    event FightWon(address caller);
+    event FightLost(address caller);
 
     /** FUNCTION **/  
 
@@ -5659,15 +5660,26 @@ contract ApocalypseGame is Pausable, Auth {
 
     /* Fight functions */
 
-    function updateCharacter(bool fightStatus, uint256 tokenId, uint256 shieldID) internal {
+    function updateCharacter(bool fightStatus, uint256 tokenId, uint256 shieldID, address account) internal {
         if (fightStatus == true) {
             uint256 totalDefence = apocCharacter.getBaseDefence(tokenId).add(apocCharacter.getAngelModifier(tokenId)).add(apocShield.getBaseDefence(shieldID));
             uint256 _reduceHP = getHPRequired(tokenId).sub(totalDefence);
             apocCharacter.reduceHP(tokenId, _reduceHP);
             apocCharacter.receiveXP(tokenId, getXPGain(tokenId));
             distributor.distributeReward(_msgSender(), apocCharacter.getCharLevel(tokenId).mul(10**rewardToken.decimals()));
+
+            emit FightWon(account);
         } else if (fightStatus == false) {
             apocCharacter.reduceHP(tokenId, getHPRequired(tokenId));
+            emit FightLost(account);
+        }
+    }
+
+    function reduceWeaponWandEndurance(uint256 _charTokenID, uint256 _charWeaponID) internal {
+        if (apocCharacter.getCharType(_charTokenID) == 0) {
+            apocWeapon.reduceEndurance(_charWeaponID, enduranceDeduction);
+        } else if (apocCharacter.getCharType(_charTokenID) == 1) {
+            apocWand.reduceEndurance(_charWeaponID, enduranceDeduction);
         }
     }
 
@@ -5713,17 +5725,13 @@ contract ApocalypseGame is Pausable, Auth {
         
         apocShield.reduceEndurance(_charShieldID, enduranceDeduction);
 
-        if (apocCharacter.getCharType(_charTokenID) == 0) {
-            apocWeapon.reduceEndurance(_charWeaponID, enduranceDeduction);
-        } else if (apocCharacter.getCharType(_charTokenID) == 1) {
-            apocWand.reduceEndurance(_charWeaponID, enduranceDeduction);
-        }
+        reduceWeaponWandEndurance(_charTokenID, _charWeaponID);
 
         uint256[3] memory rand = mixer(_charTokenID);
 
         bool fightStatus = checkFight(_charTokenID, _charWeaponID, rand[0]);
 
-        updateCharacter(fightStatus, charSlot[_msgSender()].tokenID1, _charShieldID);
+        updateCharacter(fightStatus, charSlot[_msgSender()].tokenID1, _charShieldID, _msgSender());
 
         increaseSupply();
 
@@ -5747,17 +5755,13 @@ contract ApocalypseGame is Pausable, Auth {
         
         apocShield.reduceEndurance(_charShieldID, enduranceDeduction);
 
-        if (apocCharacter.getCharType(_charTokenID) == 0) {
-            apocWeapon.reduceEndurance(_charWeaponID, enduranceDeduction);
-        } else if (apocCharacter.getCharType(_charTokenID) == 1) {
-            apocWand.reduceEndurance(_charWeaponID, enduranceDeduction);
-        }
+        reduceWeaponWandEndurance(_charTokenID, _charWeaponID);
 
         uint256[3] memory rand = mixer(_charTokenID);
 
         bool fightStatus = checkFight(_charTokenID, _charWeaponID, rand[0]);
 
-        updateCharacter(fightStatus, charSlot[_msgSender()].tokenID2, _charShieldID);
+        updateCharacter(fightStatus, charSlot[_msgSender()].tokenID2, _charShieldID, _msgSender());
 
         increaseSupply();
 
