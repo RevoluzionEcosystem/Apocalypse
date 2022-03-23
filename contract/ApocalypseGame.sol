@@ -1877,7 +1877,7 @@ contract ApocalypseRandomizer is Auth {
     /** CONSTRUCTOR **/
     
     constructor (uint256 _baseMultipler, uint256 _addSliceOffset, uint256 _addTargetBlock) {
-        baseMultipler = _baseMultipler;
+        baseMultiplier = _baseMultipler;
         addSliceOffset = _addSliceOffset;
         addTargetBlock = _addTargetBlock;
     }
