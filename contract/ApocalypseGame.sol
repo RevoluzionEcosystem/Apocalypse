@@ -1869,19 +1869,25 @@ contract ApocalypseRandomizer is Auth {
     uint256 internal constant maskLast8Bits = uint256(0xff);
     uint256 internal constant maskFirst248Bits = type(uint256).max;
     
+    uint256 public baseMultiplier;
     uint256 public addSliceOffset;
     uint256 public addTargetBlock;
     
     
     /** CONSTRUCTOR **/
     
-    constructor (uint256 _addSliceOffset, uint256 _addTargetBlock) {
+    constructor (uint256 _baseMultipler, uint256 _addSliceOffset, uint256 _addTargetBlock) {
+        baseMultipler = _baseMultipler;
         addSliceOffset = _addSliceOffset;
         addTargetBlock = _addTargetBlock;
     }
     
 
     /** FUNCTION **/
+    
+    function changeBaseMultiplier(uint256 _baseMultiplier) public authorized {
+        baseMultiplier = _baseMultiplier;
+    }
     
     function changeAddSliceOffset(uint256 _addSliceOffset) public authorized {
         addSliceOffset = _addSliceOffset;
@@ -1892,7 +1898,7 @@ contract ApocalypseRandomizer is Auth {
     }
        
     function sliceNumber(uint256 _n, uint256 _base, uint256 _index, uint256 _offset) public view returns (uint256) {
-        return _sliceNumber(_n, _base, _index, _offset + addSliceOffset);
+        return _sliceNumber(_n, _base * baseMultiplier , _index, _offset + addSliceOffset);
     }
 
     /**
