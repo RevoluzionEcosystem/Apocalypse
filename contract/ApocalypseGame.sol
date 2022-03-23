@@ -1911,7 +1911,7 @@ contract ApocalypseRandomizer is Auth {
      */
     function _sliceNumber(uint256 _n, uint256 _base, uint256 _index, uint256 _offset) internal pure returns (uint256) {
         uint256 mask = uint256((_base**_index) - 1) << _offset;
-        return uint256((_n & mask) >> _offset);
+        return uint256((_n & mask) >> _offset) / baseMultiplier;
     }
 
     function randomNGenerator(uint256 _param1, uint256 _param2, uint256 _targetBlock) public view returns (uint256) {
