@@ -1909,7 +1909,7 @@ contract ApocalypseRandomizer is Auth {
      * @param _index how many bits long is the new number
      * @param _offset how many bits to skip
      */
-    function _sliceNumber(uint256 _n, uint256 _base, uint256 _index, uint256 _offset) internal pure returns (uint256) {
+    function _sliceNumber(uint256 _n, uint256 _base, uint256 _index, uint256 _offset) internal view returns (uint256) {
         uint256 mask = uint256((_base**_index) - 1) << _offset;
         return uint256((_n & mask) >> _offset) / baseMultiplier;
     }
