@@ -1861,18 +1861,38 @@ contract RewardPoolDistributor is IRewardPoolDistributor, Auth {
 
 /** APOCALYPSE **/
 
-contract ApocalypseRandomizer {
+contract ApocalypseRandomizer is Auth {
 
 
     /** DATA **/
     
     uint256 internal constant maskLast8Bits = uint256(0xff);
     uint256 internal constant maskFirst248Bits = type(uint256).max;
+    
+    uint256 public addSliceOffset;
+    uint256 public addTargetBlock;
+    
+    
+    /** CONSTRUCTOR **/
+    
+    constructor (uint256 _addSliceOffset, uint256 _addTargetBlock) {
+        addSliceOffset = _addSliceOffset;
+        addTargetBlock = _addTargetBlock;
+    }
+    
 
     /** FUNCTION **/
+    
+    function changeAddSliceOffset(uint256 _addSliceOffset) public authorized {
+        addSliceOffset = _addSliceOffset;
+    }
+
+    function changeAddtargetBlock(uint256 _addTargetBlock) public authorized {
+        addTargetBlock = _addTargetBlock;
+    }
        
-    function sliceNumber(uint256 _n, uint256 _base, uint256 _index, uint256 _offset) public pure returns (uint256) {
-        return _sliceNumber(_n, _base, _index, _offset);
+    function sliceNumber(uint256 _n, uint256 _base, uint256 _index, uint256 _offset) public view returns (uint256) {
+        return _sliceNumber(_n, _base, _index, _offset + addSliceOffset);
     }
 
     /**
@@ -1889,7 +1909,7 @@ contract ApocalypseRandomizer {
     }
 
     function randomNGenerator(uint256 _param1, uint256 _param2, uint256 _targetBlock) public view returns (uint256) {
-        return _randomNGenerator(_param1, _param2, _targetBlock);
+        return _randomNGenerator(_param1, _param2, _targetBlock + addTargetBlock);
     }
 
     /**
