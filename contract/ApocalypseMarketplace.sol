@@ -1299,7 +1299,10 @@ contract Marketplace is Auth, Pausable, ReentrancyGuard {
     Counters.Counter private _itemsCanceled;
     
     address public constant ZERO = address(0);
-    
+    address public feeReceiver;
+    uint256 public saleTax;
+    uint256 public saleTaxDenominator;
+
     struct MarketItem {
         uint256 itemID;
         address contractNFT;
@@ -1316,7 +1319,15 @@ contract Marketplace is Auth, Pausable, ReentrancyGuard {
     
     /** CONSTRUCTOR **/
 
-    constructor() {}
+    constructor(
+        address _feeReceiver,
+        uint256 _saleTax,
+        uint256 _saleTaxDenominator
+    ) {
+        feeReceiver = _feeReceiver;
+        saleTax = _saleTax;
+        saleTaxDenominator = _saleTaxDenominator;
+    }
 
 
     /** EVENT **/
@@ -1324,16 +1335,47 @@ contract Marketplace is Auth, Pausable, ReentrancyGuard {
     event MarketItemCreated (uint256 indexed _itemID, address indexed _contractNFT, uint256 indexed _tokenID, address _seller, address _owner, uint256 _price, bool _sold);
     event MarketItemSold (uint256 indexed _itemID, address _owner);
     event MarketItemCanceled (uint256 indexed _itemID, address _owner);
-     
+    event ChangeFeeReceiver (address _caller, address _prevFeeReceiver, address _newFeeReceiver);
+    event SetSaleTax (address _caller, uint256 _prevSaleTax, uint256 _newSaleTax, uint256 _prevSaleTaxDenominator, uint256 _newSaleTaxDenominator);
     
     /** FUNCTION **/
+
+    /**
+     * @dev Get the item ID on marketplace for the NFt.
+     */
+    function getItemIDForNFT(address _contractNFT, uint256 _tokenID) public view returns (uint256) {
+        return getItemIDForSpecificNFT[_contractNFT][_tokenID];
+    }
+
+    /**
+     * @dev Change the address of fee receiver.
+     */
+    function changeFeeReceiver(address _feeReceiver) external onlyOwner {
+        require(feeReceiver != _feeReceiver, "This is the current fee receiver address!");
+        address prevFeeReceiver = feeReceiver;
+        feeReceiver = _feeReceiver;
+        emit ChangeFeeReceiver(_msgSender(), prevFeeReceiver, feeReceiver);
+    }
+
+    /**
+     * @dev Set sale tax.
+     */
+    function setSaleTax(uint256 _saleTax, uint256 _saleTaxDenominator) external onlyOwner {
+        require(saleTax != _saleTax, "This is the current sale tax!!");
+        require(_saleTax <= _saleTaxDenominator / 5, "Sale tax cannot exceed 20%!!");
+        uint256 prevSaleTax = saleTax;
+        uint256 prevSaleTaxDenominator = saleTaxDenominator;
+        saleTax = _saleTax;
+        saleTaxDenominator = _saleTaxDenominator;
+        emit SetSaleTax(_msgSender(), prevSaleTax, saleTax, prevSaleTaxDenominator, saleTaxDenominator);
+    }
 
     /**
      * @dev Create a new listing on marketplace.
      */
     function createMarketItem(address _contractNFT, uint256 _tokenID, uint256 _price) public payable whenNotPaused nonReentrant {
 
-        require(_price > 0, "Price must be greater than 0");
+        require(_price > 0, "Price must be greater than 0!");
 
         _itemsID.increment();
         uint256 _itemID = _itemsID.current();
@@ -1363,7 +1405,11 @@ contract Marketplace is Auth, Pausable, ReentrancyGuard {
 
         emit MarketItemSold(_itemID, _msgSender());
 
-        idToMarketItem[_itemID].seller.transfer(_msgValue());
+        uint256 _tax = _price * (saleTax / saleTaxDenominator);
+        uint256 _soldFor = _price - _tax;
+
+        payable(feeReceiver).transfer(_tax);
+        idToMarketItem[_itemID].seller.transfer(_soldFor);
         IERC721(_contractNFT).transferFrom(address(this), _msgSender(), _tokenID);
             
         idToMarketItem[_itemID].owner = payable(_msgSender());
