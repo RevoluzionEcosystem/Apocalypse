@@ -1417,7 +1417,7 @@ contract Marketplace is Auth, Pausable, ReentrancyGuard {
 
         emit MarketItemSold(_itemID, _msgSender());
 
-        uint256 _tax = _price * (saleTax / saleTaxDenominator);
+        uint256 _tax = (_price * saleTax) / saleTaxDenominator;
         uint256 _soldFor = _price - _tax;
 
         payable(feeReceiver).transfer(_tax);
