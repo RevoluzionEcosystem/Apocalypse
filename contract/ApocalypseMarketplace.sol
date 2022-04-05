@@ -1341,7 +1341,21 @@ contract Marketplace is Auth, Pausable, ReentrancyGuard {
     /** FUNCTION **/
 
     /**
-     * @dev Get the item ID on marketplace for the NFt.
+     * @dev Unpause this smart contract.
+     */
+    function pause() public whenNotPaused authorized {
+        _pause();
+    }
+    
+    /**
+     * @dev Unpause this smart contract.
+     */
+    function unpause() public whenPaused onlyOwner {
+        _unpause();
+    }
+
+    /**
+     * @dev Get the item ID on marketplace for the NFT.
      */
     function getItemIDForNFT(address _contractNFT, uint256 _tokenID) public view returns (uint256) {
         return getItemIDForSpecificNFT[_contractNFT][_tokenID];
@@ -1396,12 +1410,10 @@ contract Marketplace is Auth, Pausable, ReentrancyGuard {
             
         uint256 _price = idToMarketItem[_itemID].price;
         uint256 _tokenID = idToMarketItem[_itemID].tokenID;
-        address _owner = idToMarketItem[_itemID].owner;
         bool _sold = idToMarketItem[_itemID].sold;
             
         require(_msgValue() == _price, "Please submit the asking price in order to complete the purchase.");
-        require(_sold != true && _owner != payable(ZERO), "This NFT has been sold, please make an offer to the new owner.");
-        require(_sold == true && _owner == payable(ZERO), "This listing was already canceled, please make an offer to the seller.");
+        require(_sold == false, "This NFT has either been sold or the listing was canceled. Please make an offer to the current owner.");
 
         emit MarketItemSold(_itemID, _msgSender());
 
@@ -1430,7 +1442,7 @@ contract Marketplace is Auth, Pausable, ReentrancyGuard {
         bool _sold = idToMarketItem[_itemID].sold;
 
         require(_msgSender() == _seller, "You are not the seller for this item.");
-        require(_sold == true && _owner == payable(ZERO), "This listing was already canceled, please make an offer to the seller.");
+        require(_sold == false && _owner == payable(ZERO), "This NFT has either been sold or the listing was already canceled");
         
         emit MarketItemCanceled(_itemID, _msgSender());
 
