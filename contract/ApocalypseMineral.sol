@@ -1331,45 +1331,52 @@ contract ApocalypseMineral is ERC1155, Auth, Pausable, ERC1155Burnable, ERC1155S
         uint256[4] mineralChances;
         string mineralName;
         string mineralDescription;
+        string mineralImageLink;
     }
 
     Mineral[] public apocMineral;
 
     string public uriExtension;
+    string public imageLink;
 
     /** CONSTRUCTOR **/
 
-    constructor() ERC1155("https://api.apocgame.io/minerals/") {
-        createMineral(2, 1, [uint256(5), uint256(50), uint256(50), uint256(50)], "Coal", "");
-        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Super Coal", "");
-        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Ultra Coal", "");
-        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Iron Ore", "");
-        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Iron Ingot", "");
-        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Mithral", "");
-        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Mithral Ingot", "");
-        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Bronze", "");
-        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Bronze Ingot", "");
-        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Silver", "");
-        createMineral(2, 1, [uint256(4), uint256(0), uint256(50), uint256(50)], "Silver Ingot", "");
-        createMineral(2, 1, [uint256(3), uint256(0), uint256(50), uint256(50)], "Gold", "");
-        createMineral(2, 1, [uint256(2), uint256(0), uint256(50), uint256(50)], "Gold Ingot", "");
-        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Crystal", "");
-        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Crystalware", "");
-        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Sapphire", "");
-        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Ruby", "");
-        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Magic Ruby", "");
-        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Emerald", "");
-        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Magic Emerald", "");
-        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Diamond", "");
-        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Magic Diamond", "");
-        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Merien Stone", "");
-        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Xelima Stone", "");
-        createMineral(0, 1, [uint256(1), uint256(0), uint256(0), uint256(0)], "Elemental Stone", "");
+    constructor(
+        string memory _imageLink
+    ) ERC1155("https://api.apocgame.io/minerals/") {
+        imageLink = _imageLink;
+
+        createMineral(2, 1, [uint256(5), uint256(50), uint256(50), uint256(50)], "Coal", "", string(abi.encodePacked(imageLink, "0.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Super Coal", "", string(abi.encodePacked(imageLink, "1.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Ultra Coal", "", string(abi.encodePacked(imageLink, "2.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Iron Ore", "", string(abi.encodePacked(imageLink, "3.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Iron Ingot", "", string(abi.encodePacked(imageLink, "4.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Mithral", "", string(abi.encodePacked(imageLink, "5.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Mithral Ingot", "", string(abi.encodePacked(imageLink, "6.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Bronze", "", string(abi.encodePacked(imageLink, "7.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Bronze Ingot", "", string(abi.encodePacked(imageLink, "8.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Silver", "", string(abi.encodePacked(imageLink,"9.png")));
+        createMineral(2, 1, [uint256(4), uint256(0), uint256(50), uint256(50)], "Silver Ingot", "", string(abi.encodePacked(imageLink, "10.png")));
+        createMineral(2, 1, [uint256(3), uint256(0), uint256(50), uint256(50)], "Gold", "", string(abi.encodePacked(imageLink, "11.png")));
+        createMineral(2, 1, [uint256(2), uint256(0), uint256(50), uint256(50)], "Gold Ingot", "", string(abi.encodePacked(imageLink, "12.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Crystal", "", string(abi.encodePacked(imageLink, "13.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Crystalware", "", string(abi.encodePacked(imageLink, "14.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Sapphire", "", string(abi.encodePacked(imageLink, "15.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Ruby", "", string(abi.encodePacked(imageLink, "16.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Magic Ruby", "", string(abi.encodePacked(imageLink, "17.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Emerald", "", string(abi.encodePacked(imageLink, "18.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Magic Emerald", "", string(abi.encodePacked(imageLink, "19.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Diamond", "", string(abi.encodePacked(imageLink, "20.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Magic Diamond", "", string(abi.encodePacked(imageLink, "21.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Merien Stone", "", string(abi.encodePacked(imageLink, "22.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Xelima Stone", "", string(abi.encodePacked(imageLink, "23.png")));
+        createMineral(0, 1, [uint256(1), uint256(0), uint256(0), uint256(0)], "Elemental Stone", "", string(abi.encodePacked(imageLink, "24.png")));
     }
 
 
     /** EVENT **/
 
+    event SetImageLink(string prevImageLink, string newImageLink);
     event SetURI(string prevURI, string newURI);
     event SetURIExtension(string prevURIExtension, string newURIExtension);
 
@@ -1377,6 +1384,15 @@ contract ApocalypseMineral is ERC1155, Auth, Pausable, ERC1155Burnable, ERC1155S
     /** FUNCTION **/
 
     // General function
+
+    /**
+     * @dev Only owner can set the new image link.
+     */
+    function setImageLink(string memory newImageLink) public onlyOwner {
+        string memory prevImageLink = imageLink;
+        imageLink = newImageLink;
+        emit SetImageLink(prevImageLink, newImageLink);
+    }
 
     /**
      * @dev Only owner can set the new URI.
@@ -1420,14 +1436,16 @@ contract ApocalypseMineral is ERC1155, Auth, Pausable, ERC1155Burnable, ERC1155S
         uint256 _mineralUpgradeCost,
         uint256[4] memory _mineralChances,
         string memory _mineralName,
-        string memory _mineralDescription
+        string memory _mineralDescription,
+        string memory _mineralImageLink
     ) public authorized {
         Mineral memory _apocMineral = Mineral({
             mineralUpgradeMOQ: _mineralUpgradeMOQ,
             mineralUpgradeCost: _mineralUpgradeCost,
             mineralChances: _mineralChances,
             mineralName: _mineralName,
-            mineralDescription: _mineralDescription
+            mineralDescription: _mineralDescription,
+            mineralImageLink: _mineralImageLink
         });
         
         apocMineral.push(_apocMineral);
@@ -1509,6 +1527,14 @@ contract ApocalypseMineral is ERC1155, Auth, Pausable, ERC1155Burnable, ERC1155S
     }
 
     /**
+     * @dev Change information for the mineralImageLink.
+     */
+    function setMineralImageLink(uint256 _tokenID, string memory _mineralImageLink) public authorized {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        apocMineral[_tokenID].mineralImageLink = _mineralImageLink;
+    }
+
+    /**
      * @dev Get information for the mineralUpgradeMOQ.
      */
     function getMineralUpgradeMOQ(uint256 _tokenID) public view returns (uint256) {
@@ -1569,6 +1595,14 @@ contract ApocalypseMineral is ERC1155, Auth, Pausable, ERC1155Burnable, ERC1155S
     function getMineralDescription(uint256 _tokenID) public view returns (string memory) {
         require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
         return apocMineral[_tokenID].mineralDescription;
+    }
+
+    /**
+     * @dev Get information for the mineralimageLink.
+     */
+    function getMineralImageLink(uint256 _tokenID) public view returns (string memory) {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        return apocMineral[_tokenID].mineralImageLink;
     }
 
     // Mint function
