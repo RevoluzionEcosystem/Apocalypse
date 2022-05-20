@@ -1384,6 +1384,25 @@ contract ApocalypseMineral is ERC1155, Auth, Pausable, ERC1155Burnable, ERC1155S
     /** FUNCTION **/
 
     // General function
+    
+    /**
+     * @dev Allow smart contract to receive payment.
+     */
+    receive() external payable {}
+
+    /**
+     * @dev Only owner can withdraw ERC20-based token in smart contract.
+     */
+    function withdrawTokens(ERC20 _token, address beneficiary) public onlyOwner {
+        require(ERC20(_token).transfer(beneficiary, ERC20(_token).balanceOf(address(this))));
+    }
+
+    /**
+     * @dev Only owner can withdraw native token in smart contract.
+     */
+    function withdrawNative(address payable beneficiary) public onlyOwner {
+        beneficiary.transfer(address(this).balance);
+    }
 
     /**
      * @dev Only owner can set the new image link.
