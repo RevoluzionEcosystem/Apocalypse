@@ -741,6 +741,65 @@ abstract contract Pausable is Context {
     }
 }
 
+/**
+ * @dev Contract module that helps prevent reentrant calls to a function.
+ *
+ * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier
+ * available, which can be applied to functions to make sure there are no nested
+ * (reentrant) calls to them.
+ *
+ * Note that because there is a single `nonReentrant` guard, functions marked as
+ * `nonReentrant` may not call one another. This can be worked around by making
+ * those functions `private`, and then adding `external` `nonReentrant` entry
+ * points to them.
+ *
+ * TIP: If you would like to learn more about reentrancy and alternative ways
+ * to protect against it, check out our blog post
+ * https://blog.openzeppelin.com/reentrancy-after-istanbul/[Reentrancy After Istanbul].
+ */
+abstract contract ReentrancyGuard {
+    // Booleans are more expensive than uint256 or any type that takes up a full
+    // word because each write operation emits an extra SLOAD to first read the
+    // slot's contents, replace the bits taken up by the boolean, and then write
+    // back. This is the compiler's defense against contract upgrades and
+    // pointer aliasing, and it cannot be disabled.
+
+    // The values being non-zero value makes deployment a bit more expensive,
+    // but in exchange the refund on every call to nonReentrant will be lower in
+    // amount. Since refunds are capped to a percentage of the total
+    // transaction's gas, it is best to keep them low in cases like this one, to
+    // increase the likelihood of the full refund coming into effect.
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    uint256 private _status;
+
+    constructor() {
+        _status = _NOT_ENTERED;
+    }
+
+    /**
+     * @dev Prevents a contract from calling itself, directly or indirectly.
+     * Calling a `nonReentrant` function from another `nonReentrant`
+     * function is not supported. It is possible to prevent this from happening
+     * by making the `nonReentrant` function external, and making it call a
+     * `private` function that does the actual work.
+     */
+    modifier nonReentrant() {
+        // On the first call to nonReentrant, _notEntered will be true
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+
+        // Any calls to nonReentrant after this point will fail
+        _status = _ENTERED;
+
+        _;
+
+        // By storing the original value once again, a refund is triggered (see
+        // https://eips.ethereum.org/EIPS/eip-2200)
+        _status = _NOT_ENTERED;
+    }
+}
+
 
 /** UNISWAP V2 INTERFACES **/
 
@@ -1066,6 +1125,193 @@ interface IERC721Enumerable is IERC721 {
      * Use along with {totalSupply} to enumerate all tokens.
      */
     function tokenByIndex(uint256 index) external view returns (uint256);
+}
+
+/**
+ * @dev Required interface of an ERC1155 compliant contract, as defined in the
+ * https://eips.ethereum.org/EIPS/eip-1155[EIP].
+ *
+ * _Available since v3.1._
+ */
+interface IERC1155 is IERC165 {
+    /**
+     * @dev Emitted when `value` tokens of token type `id` are transferred from `from` to `to` by `operator`.
+     */
+    event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value);
+
+    /**
+     * @dev Equivalent to multiple {TransferSingle} events, where `operator`, `from` and `to` are the same for all
+     * transfers.
+     */
+    event TransferBatch(
+        address indexed operator,
+        address indexed from,
+        address indexed to,
+        uint256[] ids,
+        uint256[] values
+    );
+
+    /**
+     * @dev Emitted when `account` grants or revokes permission to `operator` to transfer their tokens, according to
+     * `approved`.
+     */
+    event ApprovalForAll(address indexed account, address indexed operator, bool approved);
+
+    /**
+     * @dev Emitted when the URI for token type `id` changes to `value`, if it is a non-programmatic URI.
+     *
+     * If an {URI} event was emitted for `id`, the standard
+     * https://eips.ethereum.org/EIPS/eip-1155#metadata-extensions[guarantees] that `value` will equal the value
+     * returned by {IERC1155MetadataURI-uri}.
+     */
+    event URI(string value, uint256 indexed id);
+
+    /**
+     * @dev Returns the amount of tokens of token type `id` owned by `account`.
+     *
+     * Requirements:
+     *
+     * - `account` cannot be the zero address.
+     */
+    function balanceOf(address account, uint256 id) external view returns (uint256);
+
+    /**
+     * @dev xref:ROOT:erc1155.adoc#batch-operations[Batched] version of {balanceOf}.
+     *
+     * Requirements:
+     *
+     * - `accounts` and `ids` must have the same length.
+     */
+    function balanceOfBatch(address[] calldata accounts, uint256[] calldata ids)
+        external
+        view
+        returns (uint256[] memory);
+
+    /**
+     * @dev Grants or revokes permission to `operator` to transfer the caller's tokens, according to `approved`,
+     *
+     * Emits an {ApprovalForAll} event.
+     *
+     * Requirements:
+     *
+     * - `operator` cannot be the caller.
+     */
+    function setApprovalForAll(address operator, bool approved) external;
+
+    /**
+     * @dev Returns true if `operator` is approved to transfer ``account``'s tokens.
+     *
+     * See {setApprovalForAll}.
+     */
+    function isApprovedForAll(address account, address operator) external view returns (bool);
+
+    /**
+     * @dev Transfers `amount` tokens of token type `id` from `from` to `to`.
+     *
+     * Emits a {TransferSingle} event.
+     *
+     * Requirements:
+     *
+     * - `to` cannot be the zero address.
+     * - If the caller is not `from`, it must be have been approved to spend ``from``'s tokens via {setApprovalForAll}.
+     * - `from` must have a balance of tokens of type `id` of at least `amount`.
+     * - If `to` refers to a smart contract, it must implement {IERC1155Receiver-onERC1155Received} and return the
+     * acceptance magic value.
+     */
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes calldata data
+    ) external;
+
+    /**
+     * @dev xref:ROOT:erc1155.adoc#batch-operations[Batched] version of {safeTransferFrom}.
+     *
+     * Emits a {TransferBatch} event.
+     *
+     * Requirements:
+     *
+     * - `ids` and `amounts` must have the same length.
+     * - If `to` refers to a smart contract, it must implement {IERC1155Receiver-onERC1155BatchReceived} and return the
+     * acceptance magic value.
+     */
+    function safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] calldata ids,
+        uint256[] calldata amounts,
+        bytes calldata data
+    ) external;
+}
+
+/**
+ * @dev _Available since v3.1._
+ */
+interface IERC1155Receiver is IERC165 {
+    /**
+     * @dev Handles the receipt of a single ERC1155 token type. This function is
+     * called at the end of a `safeTransferFrom` after the balance has been updated.
+     *
+     * NOTE: To accept the transfer, this must return
+     * `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))`
+     * (i.e. 0xf23a6e61, or its own function selector).
+     *
+     * @param operator The address which initiated the transfer (i.e. msg.sender)
+     * @param from The address which previously owned the token
+     * @param id The ID of the token being transferred
+     * @param value The amount of tokens being transferred
+     * @param data Additional data with no specified format
+     * @return `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))` if transfer is allowed
+     */
+    function onERC1155Received(
+        address operator,
+        address from,
+        uint256 id,
+        uint256 value,
+        bytes calldata data
+    ) external returns (bytes4);
+
+    /**
+     * @dev Handles the receipt of a multiple ERC1155 token types. This function
+     * is called at the end of a `safeBatchTransferFrom` after the balances have
+     * been updated.
+     *
+     * NOTE: To accept the transfer(s), this must return
+     * `bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))`
+     * (i.e. 0xbc197c81, or its own function selector).
+     *
+     * @param operator The address which initiated the batch transfer (i.e. msg.sender)
+     * @param from The address which previously owned the token
+     * @param ids An array containing ids of each token being transferred (order and length must match values array)
+     * @param values An array containing amounts of each token being transferred (order and length must match ids array)
+     * @param data Additional data with no specified format
+     * @return `bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))` if transfer is allowed
+     */
+    function onERC1155BatchReceived(
+        address operator,
+        address from,
+        uint256[] calldata ids,
+        uint256[] calldata values,
+        bytes calldata data
+    ) external returns (bytes4);
+}
+
+/**
+ * @dev Interface of the optional ERC1155MetadataExtension interface, as defined
+ * in the https://eips.ethereum.org/EIPS/eip-1155#metadata-extensions[EIP].
+ *
+ * _Available since v3.1._
+ */
+interface IERC1155MetadataURI is IERC1155 {
+    /**
+     * @dev Returns the URI for token type `id`.
+     *
+     * If the `\{id\}` substring is present in the URI, it must be replaced by
+     * clients with the actual token type ID.
+     */
+    function uri(uint256 id) external view returns (string memory);
 }
 
 /**
@@ -1702,6 +1948,604 @@ abstract contract ERC721Burnable is Context, ERC721 {
     }
 }
 
+/**
+ * @dev Implementation of the basic standard multi-token.
+ * See https://eips.ethereum.org/EIPS/eip-1155
+ * Originally based on code by Enjin: https://github.com/enjin/erc-1155
+ *
+ * _Available since v3.1._
+ */
+contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
+    using Address for address;
+
+    // Mapping from token ID to account balances
+    mapping(uint256 => mapping(address => uint256)) private _balances;
+
+    // Mapping from account to operator approvals
+    mapping(address => mapping(address => bool)) private _operatorApprovals;
+
+    // Used as the URI for all token types by relying on ID substitution, e.g. https://token-cdn-domain/{id}.json
+    string public _uri;
+
+    /**
+     * @dev See {_setURI}.
+     */
+    constructor(string memory uri_) {
+        _setURI(uri_);
+    }
+
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
+        return
+            interfaceId == type(IERC1155).interfaceId ||
+            interfaceId == type(IERC1155MetadataURI).interfaceId ||
+            super.supportsInterface(interfaceId);
+    }
+
+    /**
+     * @dev See {IERC1155MetadataURI-uri}.
+     *
+     * This implementation returns the same URI for *all* token types. It relies
+     * on the token type ID substitution mechanism
+     * https://eips.ethereum.org/EIPS/eip-1155#metadata[defined in the EIP].
+     *
+     * Clients calling this function must replace the `\{id\}` substring with the
+     * actual token type ID.
+     */
+    function uri(uint256) public view virtual override returns (string memory) {
+        return _uri;
+    }
+
+    /**
+     * @dev See {IERC1155-balanceOf}.
+     *
+     * Requirements:
+     *
+     * - `account` cannot be the zero address.
+     */
+    function balanceOf(address account, uint256 id) public view virtual override returns (uint256) {
+        require(account != address(0), "ERC1155: address zero is not a valid owner");
+        return _balances[id][account];
+    }
+
+    /**
+     * @dev See {IERC1155-balanceOfBatch}.
+     *
+     * Requirements:
+     *
+     * - `accounts` and `ids` must have the same length.
+     */
+    function balanceOfBatch(address[] memory accounts, uint256[] memory ids)
+        public
+        view
+        virtual
+        override
+        returns (uint256[] memory)
+    {
+        require(accounts.length == ids.length, "ERC1155: accounts and ids length mismatch");
+
+        uint256[] memory batchBalances = new uint256[](accounts.length);
+
+        for (uint256 i = 0; i < accounts.length; ++i) {
+            batchBalances[i] = balanceOf(accounts[i], ids[i]);
+        }
+
+        return batchBalances;
+    }
+
+    /**
+     * @dev See {IERC1155-setApprovalForAll}.
+     */
+    function setApprovalForAll(address operator, bool approved) public virtual override {
+        _setApprovalForAll(_msgSender(), operator, approved);
+    }
+
+    /**
+     * @dev See {IERC1155-isApprovedForAll}.
+     */
+    function isApprovedForAll(address account, address operator) public view virtual override returns (bool) {
+        return _operatorApprovals[account][operator];
+    }
+
+    /**
+     * @dev See {IERC1155-safeTransferFrom}.
+     */
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    ) public virtual override {
+        require(
+            from == _msgSender() || isApprovedForAll(from, _msgSender()),
+            "ERC1155: caller is not owner nor approved"
+        );
+        _safeTransferFrom(from, to, id, amount, data);
+    }
+
+    /**
+     * @dev See {IERC1155-safeBatchTransferFrom}.
+     */
+    function safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) public virtual override {
+        require(
+            from == _msgSender() || isApprovedForAll(from, _msgSender()),
+            "ERC1155: transfer caller is not owner nor approved"
+        );
+        _safeBatchTransferFrom(from, to, ids, amounts, data);
+    }
+
+    /**
+     * @dev Transfers `amount` tokens of token type `id` from `from` to `to`.
+     *
+     * Emits a {TransferSingle} event.
+     *
+     * Requirements:
+     *
+     * - `to` cannot be the zero address.
+     * - `from` must have a balance of tokens of type `id` of at least `amount`.
+     * - If `to` refers to a smart contract, it must implement {IERC1155Receiver-onERC1155Received} and return the
+     * acceptance magic value.
+     */
+    function _safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    ) internal virtual {
+        require(to != address(0), "ERC1155: transfer to the zero address");
+
+        address operator = _msgSender();
+        uint256[] memory ids = _asSingletonArray(id);
+        uint256[] memory amounts = _asSingletonArray(amount);
+
+        _beforeTokenTransfer(operator, from, to, ids, amounts, data);
+
+        uint256 fromBalance = _balances[id][from];
+        require(fromBalance >= amount, "ERC1155: insufficient balance for transfer");
+        unchecked {
+            _balances[id][from] = fromBalance - amount;
+        }
+        _balances[id][to] += amount;
+
+        emit TransferSingle(operator, from, to, id, amount);
+
+        _afterTokenTransfer(operator, from, to, ids, amounts, data);
+
+        _doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
+    }
+
+    /**
+     * @dev xref:ROOT:erc1155.adoc#batch-operations[Batched] version of {_safeTransferFrom}.
+     *
+     * Emits a {TransferBatch} event.
+     *
+     * Requirements:
+     *
+     * - If `to` refers to a smart contract, it must implement {IERC1155Receiver-onERC1155BatchReceived} and return the
+     * acceptance magic value.
+     */
+    function _safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual {
+        require(ids.length == amounts.length, "ERC1155: ids and amounts length mismatch");
+        require(to != address(0), "ERC1155: transfer to the zero address");
+
+        address operator = _msgSender();
+
+        _beforeTokenTransfer(operator, from, to, ids, amounts, data);
+
+        for (uint256 i = 0; i < ids.length; ++i) {
+            uint256 id = ids[i];
+            uint256 amount = amounts[i];
+
+            uint256 fromBalance = _balances[id][from];
+            require(fromBalance >= amount, "ERC1155: insufficient balance for transfer");
+            unchecked {
+                _balances[id][from] = fromBalance - amount;
+            }
+            _balances[id][to] += amount;
+        }
+
+        emit TransferBatch(operator, from, to, ids, amounts);
+
+        _afterTokenTransfer(operator, from, to, ids, amounts, data);
+
+        _doSafeBatchTransferAcceptanceCheck(operator, from, to, ids, amounts, data);
+    }
+
+    /**
+     * @dev Sets a new URI for all token types, by relying on the token type ID
+     * substitution mechanism
+     * https://eips.ethereum.org/EIPS/eip-1155#metadata[defined in the EIP].
+     *
+     * By this mechanism, any occurrence of the `\{id\}` substring in either the
+     * URI or any of the amounts in the JSON file at said URI will be replaced by
+     * clients with the token type ID.
+     *
+     * For example, the `https://token-cdn-domain/\{id\}.json` URI would be
+     * interpreted by clients as
+     * `https://token-cdn-domain/000000000000000000000000000000000000000000000000000000000004cce0.json`
+     * for token type ID 0x4cce0.
+     *
+     * See {uri}.
+     *
+     * Because these URIs cannot be meaningfully represented by the {URI} event,
+     * this function emits no events.
+     */
+    function _setURI(string memory newuri) internal virtual {
+        _uri = newuri;
+    }
+
+    /**
+     * @dev Creates `amount` tokens of token type `id`, and assigns them to `to`.
+     *
+     * Emits a {TransferSingle} event.
+     *
+     * Requirements:
+     *
+     * - `to` cannot be the zero address.
+     * - If `to` refers to a smart contract, it must implement {IERC1155Receiver-onERC1155Received} and return the
+     * acceptance magic value.
+     */
+    function _mint(
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    ) internal virtual {
+        require(to != address(0), "ERC1155: mint to the zero address");
+
+        address operator = _msgSender();
+        uint256[] memory ids = _asSingletonArray(id);
+        uint256[] memory amounts = _asSingletonArray(amount);
+
+        _beforeTokenTransfer(operator, address(0), to, ids, amounts, data);
+
+        _balances[id][to] += amount;
+        emit TransferSingle(operator, address(0), to, id, amount);
+
+        _afterTokenTransfer(operator, address(0), to, ids, amounts, data);
+
+        _doSafeTransferAcceptanceCheck(operator, address(0), to, id, amount, data);
+    }
+
+    /**
+     * @dev xref:ROOT:erc1155.adoc#batch-operations[Batched] version of {_mint}.
+     *
+     * Emits a {TransferBatch} event.
+     *
+     * Requirements:
+     *
+     * - `ids` and `amounts` must have the same length.
+     * - If `to` refers to a smart contract, it must implement {IERC1155Receiver-onERC1155BatchReceived} and return the
+     * acceptance magic value.
+     */
+    function _mintBatch(
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual {
+        require(to != address(0), "ERC1155: mint to the zero address");
+        require(ids.length == amounts.length, "ERC1155: ids and amounts length mismatch");
+
+        address operator = _msgSender();
+
+        _beforeTokenTransfer(operator, address(0), to, ids, amounts, data);
+
+        for (uint256 i = 0; i < ids.length; i++) {
+            _balances[ids[i]][to] += amounts[i];
+        }
+
+        emit TransferBatch(operator, address(0), to, ids, amounts);
+
+        _afterTokenTransfer(operator, address(0), to, ids, amounts, data);
+
+        _doSafeBatchTransferAcceptanceCheck(operator, address(0), to, ids, amounts, data);
+    }
+
+    /**
+     * @dev Destroys `amount` tokens of token type `id` from `from`
+     *
+     * Emits a {TransferSingle} event.
+     *
+     * Requirements:
+     *
+     * - `from` cannot be the zero address.
+     * - `from` must have at least `amount` tokens of token type `id`.
+     */
+    function _burn(
+        address from,
+        uint256 id,
+        uint256 amount
+    ) internal virtual {
+        require(from != address(0), "ERC1155: burn from the zero address");
+
+        address operator = _msgSender();
+        uint256[] memory ids = _asSingletonArray(id);
+        uint256[] memory amounts = _asSingletonArray(amount);
+
+        _beforeTokenTransfer(operator, from, address(0), ids, amounts, "");
+
+        uint256 fromBalance = _balances[id][from];
+        require(fromBalance >= amount, "ERC1155: burn amount exceeds balance");
+        unchecked {
+            _balances[id][from] = fromBalance - amount;
+        }
+
+        emit TransferSingle(operator, from, address(0), id, amount);
+
+        _afterTokenTransfer(operator, from, address(0), ids, amounts, "");
+    }
+
+    /**
+     * @dev xref:ROOT:erc1155.adoc#batch-operations[Batched] version of {_burn}.
+     *
+     * Emits a {TransferBatch} event.
+     *
+     * Requirements:
+     *
+     * - `ids` and `amounts` must have the same length.
+     */
+    function _burnBatch(
+        address from,
+        uint256[] memory ids,
+        uint256[] memory amounts
+    ) internal virtual {
+        require(from != address(0), "ERC1155: burn from the zero address");
+        require(ids.length == amounts.length, "ERC1155: ids and amounts length mismatch");
+
+        address operator = _msgSender();
+
+        _beforeTokenTransfer(operator, from, address(0), ids, amounts, "");
+
+        for (uint256 i = 0; i < ids.length; i++) {
+            uint256 id = ids[i];
+            uint256 amount = amounts[i];
+
+            uint256 fromBalance = _balances[id][from];
+            require(fromBalance >= amount, "ERC1155: burn amount exceeds balance");
+            unchecked {
+                _balances[id][from] = fromBalance - amount;
+            }
+        }
+
+        emit TransferBatch(operator, from, address(0), ids, amounts);
+
+        _afterTokenTransfer(operator, from, address(0), ids, amounts, "");
+    }
+
+    /**
+     * @dev Approve `operator` to operate on all of `owner` tokens
+     *
+     * Emits a {ApprovalForAll} event.
+     */
+    function _setApprovalForAll(
+        address owner,
+        address operator,
+        bool approved
+    ) internal virtual {
+        require(owner != operator, "ERC1155: setting approval status for self");
+        _operatorApprovals[owner][operator] = approved;
+        emit ApprovalForAll(owner, operator, approved);
+    }
+
+    /**
+     * @dev Hook that is called before any token transfer. This includes minting
+     * and burning, as well as batched variants.
+     *
+     * The same hook is called on both single and batched variants. For single
+     * transfers, the length of the `ids` and `amounts` arrays will be 1.
+     *
+     * Calling conditions (for each `id` and `amount` pair):
+     *
+     * - When `from` and `to` are both non-zero, `amount` of ``from``'s tokens
+     * of token type `id` will be  transferred to `to`.
+     * - When `from` is zero, `amount` tokens of token type `id` will be minted
+     * for `to`.
+     * - when `to` is zero, `amount` of ``from``'s tokens of token type `id`
+     * will be burned.
+     * - `from` and `to` are never both zero.
+     * - `ids` and `amounts` have the same, non-zero length.
+     *
+     * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
+     */
+    function _beforeTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual {}
+
+    /**
+     * @dev Hook that is called after any token transfer. This includes minting
+     * and burning, as well as batched variants.
+     *
+     * The same hook is called on both single and batched variants. For single
+     * transfers, the length of the `id` and `amount` arrays will be 1.
+     *
+     * Calling conditions (for each `id` and `amount` pair):
+     *
+     * - When `from` and `to` are both non-zero, `amount` of ``from``'s tokens
+     * of token type `id` will be  transferred to `to`.
+     * - When `from` is zero, `amount` tokens of token type `id` will be minted
+     * for `to`.
+     * - when `to` is zero, `amount` of ``from``'s tokens of token type `id`
+     * will be burned.
+     * - `from` and `to` are never both zero.
+     * - `ids` and `amounts` have the same, non-zero length.
+     *
+     * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
+     */
+    function _afterTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual {}
+
+    function _doSafeTransferAcceptanceCheck(
+        address operator,
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    ) private {
+        if (to.isContract()) {
+            try IERC1155Receiver(to).onERC1155Received(operator, from, id, amount, data) returns (bytes4 response) {
+                if (response != IERC1155Receiver.onERC1155Received.selector) {
+                    revert("ERC1155: ERC1155Receiver rejected tokens");
+                }
+            } catch Error(string memory reason) {
+                revert(reason);
+            } catch {
+                revert("ERC1155: transfer to non ERC1155Receiver implementer");
+            }
+        }
+    }
+
+    function _doSafeBatchTransferAcceptanceCheck(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) private {
+        if (to.isContract()) {
+            try IERC1155Receiver(to).onERC1155BatchReceived(operator, from, ids, amounts, data) returns (
+                bytes4 response
+            ) {
+                if (response != IERC1155Receiver.onERC1155BatchReceived.selector) {
+                    revert("ERC1155: ERC1155Receiver rejected tokens");
+                }
+            } catch Error(string memory reason) {
+                revert(reason);
+            } catch {
+                revert("ERC1155: transfer to non ERC1155Receiver implementer");
+            }
+        }
+    }
+
+    function _asSingletonArray(uint256 element) private pure returns (uint256[] memory) {
+        uint256[] memory array = new uint256[](1);
+        array[0] = element;
+
+        return array;
+    }
+}
+
+/**
+ * @dev Extension of {ERC1155} that allows token holders to destroy both their
+ * own tokens and those that they have been approved to use.
+ *
+ * _Available since v3.1._
+ */
+abstract contract ERC1155Burnable is ERC1155 {
+    function burn(
+        address account,
+        uint256 id,
+        uint256 value
+    ) public virtual {
+        require(
+            account == _msgSender() || isApprovedForAll(account, _msgSender()),
+            "ERC1155: caller is not owner nor approved"
+        );
+
+        _burn(account, id, value);
+    }
+
+    function burnBatch(
+        address account,
+        uint256[] memory ids,
+        uint256[] memory values
+    ) public virtual {
+        require(
+            account == _msgSender() || isApprovedForAll(account, _msgSender()),
+            "ERC1155: caller is not owner nor approved"
+        );
+
+        _burnBatch(account, ids, values);
+    }
+}
+
+/**
+ * @dev Extension of ERC1155 that adds tracking of total supply per id.
+ *
+ * Useful for scenarios where Fungible and Non-fungible tokens have to be
+ * clearly identified. Note: While a totalSupply of 1 might mean the
+ * corresponding is an NFT, there is no guarantees that no other token with the
+ * same id are not going to be minted.
+ */
+abstract contract ERC1155Supply is ERC1155 {
+    mapping(uint256 => uint256) private _totalSupply;
+
+    /**
+     * @dev Total amount of tokens in with a given id.
+     */
+    function totalSupply(uint256 id) public view virtual returns (uint256) {
+        return _totalSupply[id];
+    }
+
+    /**
+     * @dev Indicates whether any token exist with a given id, or not.
+     */
+    function exists(uint256 id) public view virtual returns (bool) {
+        return ERC1155Supply.totalSupply(id) > 0;
+    }
+
+    /**
+     * @dev See {ERC1155-_beforeTokenTransfer}.
+     */
+    function _beforeTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual override {
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+
+        if (from == address(0)) {
+            for (uint256 i = 0; i < ids.length; ++i) {
+                _totalSupply[ids[i]] += amounts[i];
+            }
+        }
+
+        if (to == address(0)) {
+            for (uint256 i = 0; i < ids.length; ++i) {
+                uint256 id = ids[i];
+                uint256 amount = amounts[i];
+                uint256 supply = _totalSupply[id];
+                require(supply >= amount, "ERC1155: burn amount exceeds totalSupply");
+                unchecked {
+                    _totalSupply[id] = supply - amount;
+                }
+            }
+        }
+    }
+}
+
 
 /** REWARD POOL DISTRIBUTOR **/
 
@@ -1783,6 +2627,12 @@ contract RewardPoolDistributor is IRewardPoolDistributor, Auth {
 
 
     /* FUNCTION */
+
+    receive() external payable {}
+
+    function withdrawNative(address payable beneficiary) public onlyOwner {
+        beneficiary.transfer(address(this).balance);
+    }
 
     function unInitialized(bool initialization) external onlyToken {
         initialized = initialization;
@@ -1885,6 +2735,16 @@ contract ApocalypseRandomizer is Auth {
 
     /** FUNCTION **/
     
+    receive() external payable {}
+ 
+    function withdrawTokens(IERC20Extended _token, address beneficiary) public onlyOwner {
+        require(IERC20Extended(_token).transfer(beneficiary, IERC20Extended(_token).balanceOf(address(this))));
+    }
+
+    function withdrawNative(address payable beneficiary) public onlyOwner {
+        beneficiary.transfer(address(this).balance);
+    }
+
     function changeBaseMultiplier(uint256 _baseMultiplier) public authorized {
         baseMultiplier = _baseMultiplier;
     }
@@ -2089,6 +2949,10 @@ contract ApocalypseCharacter is ERC721, ERC721Enumerable, Pausable, Auth, ERC721
     /** FUNCTION **/
 
     /* General functions */
+
+    function withdrawNative(address payable beneficiary) public onlyOwner {
+        beneficiary.transfer(address(this).balance);
+    }
 
     function pause() public whenNotPaused authorized {
         _pause();
@@ -2944,6 +3808,16 @@ contract ApocalypseWeapon is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
     /* General functions */
 
+    receive() external payable {}
+ 
+    function withdrawTokens(IERC20Extended _token, address beneficiary) public onlyOwner {
+        require(IERC20Extended(_token).transfer(beneficiary, IERC20Extended(_token).balanceOf(address(this))));
+    }
+
+    function withdrawNative(address payable beneficiary) public onlyOwner {
+        beneficiary.transfer(address(this).balance);
+    }
+
     function pause() public whenNotPaused authorized {
         _pause();
     }
@@ -3711,6 +4585,16 @@ contract ApocalypseWand is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Burna
 
     /* General functions */
 
+    receive() external payable {}
+ 
+    function withdrawTokens(IERC20Extended _token, address beneficiary) public onlyOwner {
+        require(IERC20Extended(_token).transfer(beneficiary, IERC20Extended(_token).balanceOf(address(this))));
+    }
+
+    function withdrawNative(address payable beneficiary) public onlyOwner {
+        beneficiary.transfer(address(this).balance);
+    }
+
     function pause() public whenNotPaused authorized {
         _pause();
     }
@@ -4471,6 +5355,16 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
     /* General functions */
 
+    receive() external payable {}
+ 
+    function withdrawTokens(IERC20Extended _token, address beneficiary) public onlyOwner {
+        require(IERC20Extended(_token).transfer(beneficiary, IERC20Extended(_token).balanceOf(address(this))));
+    }
+
+    function withdrawNative(address payable beneficiary) public onlyOwner {
+        beneficiary.transfer(address(this).balance);
+    }
+
     function pause() public whenNotPaused authorized {
         _pause();
     }
@@ -5118,6 +6012,362 @@ contract ApocalypseShield is ERC721, ERC721Enumerable, Pausable, Auth, ERC721Bur
 
 }
 
+contract ApocalypseMineral is ERC1155, Auth, Pausable, ERC1155Burnable, ERC1155Supply {
+
+
+    /** LIBRARY **/
+
+    using Address for address;
+    using Strings for string;
+
+
+    /** DATA **/
+
+    struct Mineral {
+        uint256 mineralUpgradeMOQ;
+        uint256 mineralUpgradeCost;
+        uint256[4] mineralChances;
+        string mineralName;
+        string mineralDescription;
+        string mineralImageLink;
+    }
+
+    Mineral[] public apocMineral;
+
+    string public uriExtension;
+    string public imageLink;
+
+    /** CONSTRUCTOR **/
+
+    constructor(
+        string memory _imageLink
+    ) ERC1155("https://api.apocgame.io/minerals/") {
+        imageLink = _imageLink;
+
+        createMineral(2, 1, [uint256(5), uint256(50), uint256(50), uint256(50)], "Coal", "", string(abi.encodePacked(imageLink, "0.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Super Coal", "", string(abi.encodePacked(imageLink, "1.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Ultra Coal", "", string(abi.encodePacked(imageLink, "2.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Iron Ore", "", string(abi.encodePacked(imageLink, "3.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Iron Ingot", "", string(abi.encodePacked(imageLink, "4.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Mithral", "", string(abi.encodePacked(imageLink, "5.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Mithral Ingot", "", string(abi.encodePacked(imageLink, "6.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Bronze", "", string(abi.encodePacked(imageLink, "7.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Bronze Ingot", "", string(abi.encodePacked(imageLink, "8.png")));
+        createMineral(2, 1, [uint256(5), uint256(0), uint256(50), uint256(50)], "Silver", "", string(abi.encodePacked(imageLink,"9.png")));
+        createMineral(2, 1, [uint256(4), uint256(0), uint256(50), uint256(50)], "Silver Ingot", "", string(abi.encodePacked(imageLink, "10.png")));
+        createMineral(2, 1, [uint256(3), uint256(0), uint256(50), uint256(50)], "Gold", "", string(abi.encodePacked(imageLink, "11.png")));
+        createMineral(2, 1, [uint256(2), uint256(0), uint256(50), uint256(50)], "Gold Ingot", "", string(abi.encodePacked(imageLink, "12.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Crystal", "", string(abi.encodePacked(imageLink, "13.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Crystalware", "", string(abi.encodePacked(imageLink, "14.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Sapphire", "", string(abi.encodePacked(imageLink, "15.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Ruby", "", string(abi.encodePacked(imageLink, "16.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Magic Ruby", "", string(abi.encodePacked(imageLink, "17.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Emerald", "", string(abi.encodePacked(imageLink, "18.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Magic Emerald", "", string(abi.encodePacked(imageLink, "19.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Diamond", "", string(abi.encodePacked(imageLink, "20.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Magic Diamond", "", string(abi.encodePacked(imageLink, "21.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Merien Stone", "", string(abi.encodePacked(imageLink, "22.png")));
+        createMineral(2, 1, [uint256(1), uint256(0), uint256(50), uint256(50)], "Xelima Stone", "", string(abi.encodePacked(imageLink, "23.png")));
+        createMineral(0, 1, [uint256(1), uint256(0), uint256(0), uint256(0)], "Elemental Stone", "", string(abi.encodePacked(imageLink, "24.png")));
+    }
+
+
+    /** EVENT **/
+
+    event SetImageLink(string prevImageLink, string newImageLink);
+    event SetURI(string prevURI, string newURI);
+    event SetURIExtension(string prevURIExtension, string newURIExtension);
+
+
+    /** FUNCTION **/
+
+    // General function
+    
+    /**
+     * @dev Allow smart contract to receive payment.
+     */
+    receive() external payable {}
+
+    /**
+     * @dev Only owner can withdraw ERC20-based token in smart contract.
+     */
+    function withdrawTokens(IERC20Extended _token, address beneficiary) public onlyOwner {
+        require(IERC20Extended(_token).transfer(beneficiary, IERC20Extended(_token).balanceOf(address(this))));
+    }
+
+    /**
+     * @dev Only owner can withdraw native token in smart contract.
+     */
+    function withdrawNative(address payable beneficiary) public onlyOwner {
+        beneficiary.transfer(address(this).balance);
+    }
+
+    /**
+     * @dev Only owner can set the new image link.
+     */
+    function setImageLink(string memory newImageLink) public onlyOwner {
+        string memory prevImageLink = imageLink;
+        imageLink = newImageLink;
+        emit SetImageLink(prevImageLink, newImageLink);
+    }
+
+    /**
+     * @dev Only owner can set the new URI.
+     */
+    function setURI(string memory newURI) public onlyOwner {
+        string memory prevURI = _uri;
+        _setURI(newURI);
+        emit SetURI(prevURI, newURI);
+    }
+
+    /**
+     * @dev Only owner can set the new URI extension.
+     */
+    function setURIExtension(string memory newURIExtension) public onlyOwner {
+        string memory prevURIExtension = uriExtension;
+        uriExtension = newURIExtension;
+        emit SetURIExtension(prevURIExtension, newURIExtension);
+    }
+
+    /**
+     * @dev Only owner can pause the smart contract.
+     */
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @dev Only owner can unpause the smart contract.
+     */
+    function unpause() public onlyOwner {
+        _unpause();
+    }
+
+    // Mineral related function
+
+    /**
+     * @dev Push metadata information for the mineral.
+     */
+    function createMineral(
+        uint256 _mineralUpgradeMOQ,
+        uint256 _mineralUpgradeCost,
+        uint256[4] memory _mineralChances,
+        string memory _mineralName,
+        string memory _mineralDescription,
+        string memory _mineralImageLink
+    ) public authorized {
+        Mineral memory _apocMineral = Mineral({
+            mineralUpgradeMOQ: _mineralUpgradeMOQ,
+            mineralUpgradeCost: _mineralUpgradeCost,
+            mineralChances: _mineralChances,
+            mineralName: _mineralName,
+            mineralDescription: _mineralDescription,
+            mineralImageLink: _mineralImageLink
+        });
+        
+        apocMineral.push(_apocMineral);
+    }
+
+    /**
+     * @dev Change information for the mineralUpgradeMOQ.
+     */
+    function setMineralUpgradeMOQ(uint256 _tokenID, uint256 _mineralUpgradeMOQ) public authorized {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        require(apocMineral[_tokenID].mineralUpgradeMOQ != _mineralUpgradeMOQ, "This is the current value!"); 
+        apocMineral[_tokenID].mineralUpgradeMOQ = _mineralUpgradeMOQ;
+    }
+
+    /**
+     * @dev Change information for the mineralUpgradeCost.
+     */
+    function setMineralUpgradeCost(uint256 _tokenID, uint256 _mineralUpgradeCost) public authorized {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        require(apocMineral[_tokenID].mineralUpgradeCost != _mineralUpgradeCost, "This is the current value!"); 
+        require(_mineralUpgradeCost > 0, "Cannot set as 0!");
+        apocMineral[_tokenID].mineralUpgradeCost = _mineralUpgradeCost;
+    }
+
+    /**
+     * @dev Change information for the mineralPVPDropChances.
+     */
+    function setMineralPVPDropChance(uint256 _tokenID, uint256 _mineralPVPDropChance) public authorized {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        require(apocMineral[_tokenID].mineralChances[0] != _mineralPVPDropChance, "This is the current value!"); 
+        require(_mineralPVPDropChance > 0, "Cannot set as 0!");
+        apocMineral[_tokenID].mineralChances[0] = _mineralPVPDropChance;
+    }
+
+    /**
+     * @dev Change information for the mineralMiningChances.
+     */
+    function setMineralMiningChance(uint256 _tokenID, uint256 _mineralMiningChance) public authorized {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        require(apocMineral[_tokenID].mineralChances[1] != _mineralMiningChance, "This is the current value!"); 
+        require(_mineralMiningChance > 0, "Cannot set as 0!");
+        apocMineral[_tokenID].mineralChances[1] = _mineralMiningChance;
+    }
+
+    /**
+     * @dev Change information for the mineralUpgradeChances.
+     */
+    function setMineralUpgradeChance(uint256 _tokenID, uint256 _mineralUpgradeChance) public authorized {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        require(apocMineral[_tokenID].mineralChances[2] != _mineralUpgradeChance, "This is the current value!"); 
+        require(_mineralUpgradeChance > 0, "Cannot set as 0!");
+        apocMineral[_tokenID].mineralChances[2] = _mineralUpgradeChance;
+    }
+
+    /**
+     * @dev Change information for the mineralDepletionChances.
+     */
+    function setMineralDepletionChance(uint256 _tokenID, uint256 _mineralDepletionChance) public authorized {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        require(apocMineral[_tokenID].mineralChances[3] != _mineralDepletionChance, "This is the current value!"); 
+        require(_mineralDepletionChance > 0, "Cannot set as 0!");
+        apocMineral[_tokenID].mineralChances[3] = _mineralDepletionChance;
+    }
+
+    /**
+     * @dev Change information for the mineralName.
+     */
+    function setMineralName(uint256 _tokenID, string memory _mineralName) public authorized {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        apocMineral[_tokenID].mineralName = _mineralName;
+    }
+
+    /**
+     * @dev Change information for the mineralDescription.
+     */
+    function setMineralDescription(uint256 _tokenID, string memory _mineralDescription) public authorized {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        apocMineral[_tokenID].mineralDescription = _mineralDescription;
+    }
+
+    /**
+     * @dev Change information for the mineralImageLink.
+     */
+    function setMineralImageLink(uint256 _tokenID, string memory _mineralImageLink) public authorized {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        apocMineral[_tokenID].mineralImageLink = _mineralImageLink;
+    }
+
+    /**
+     * @dev Get information for the mineralUpgradeMOQ.
+     */
+    function getMineralUpgradeMOQ(uint256 _tokenID) public view returns (uint256) {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        return apocMineral[_tokenID].mineralUpgradeMOQ;
+    }
+
+    /**
+     * @dev Get information for the mineralUpgradeCost.
+     */
+    function getMineralUpgradeCost(uint256 _tokenID) public view returns (uint256) {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        return apocMineral[_tokenID].mineralUpgradeCost;
+    }
+
+    /**
+     * @dev Get information for the mineralPVPDropChances.
+     */
+    function getMineralPVPDropChance(uint256 _tokenID) public view returns (uint256) {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        return apocMineral[_tokenID].mineralChances[0];
+    }
+
+    /**
+     * @dev Get information for the mineralMiningChances.
+     */
+    function getMineralMiningChance(uint256 _tokenID) public view returns (uint256) {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        return apocMineral[_tokenID].mineralChances[1];
+    }
+
+    /**
+     * @dev Get information for the mineralUpgradeChances.
+     */
+    function getMineralUpgradeChance(uint256 _tokenID) public view returns (uint256) {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        return apocMineral[_tokenID].mineralChances[2];
+    }
+
+    /**
+     * @dev Get information for the mineralDepletionChances.
+     */
+    function getMineralDepletionChance(uint256 _tokenID) public view returns (uint256) {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        return apocMineral[_tokenID].mineralChances[3];
+    }
+
+    /**
+     * @dev Get information for the mineralName.
+     */
+    function getMineralName(uint256 _tokenID) public view returns (string memory) {
+        return apocMineral[_tokenID].mineralName;
+    }
+
+    /**
+     * @dev Get information for the mineralDescription.
+     */
+    function getMineralDescription(uint256 _tokenID) public view returns (string memory) {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        return apocMineral[_tokenID].mineralDescription;
+    }
+
+    /**
+     * @dev Get information for the mineralimageLink.
+     */
+    function getMineralImageLink(uint256 _tokenID) public view returns (string memory) {
+        require(_tokenID < apocMineral.length, "This mineral does not exist!"); 
+        return apocMineral[_tokenID].mineralImageLink;
+    }
+
+    /**
+     * @dev Get total minerals types.
+     */
+    function getTotalMineralTypes() public view returns (uint256) {
+        return apocMineral.length;
+    }
+
+    // Mint function
+
+    /**
+     * @dev Allow owner to mint more for supply.
+     */
+    function mint(address account, uint256 id, uint256 amount, bytes memory data) public authorized {
+        require(id < apocMineral.length, "This mineral does not exist!");
+        _mint(account, id, amount, data);
+    }
+
+    /**
+     * @dev Allow owner to mint more for supply in batch.
+     */
+    function mintBatch(address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) public authorized {
+        _mintBatch(to, ids, amounts, data);
+    }
+
+    // Required for ERC standard
+
+    /**
+     * @dev Override function for viewing URI.
+     */
+    function uri(uint256 tokenID) override public view returns (string memory) {
+        return string(abi.encodePacked(_uri, Strings.toString(tokenID), uriExtension));
+    }
+
+    /**
+     * @dev Override internal function for beforeTokenTransfer from ERC1155 and ERC1155Supply.
+     */
+    function _beforeTokenTransfer(address operator, address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data)
+        internal
+        whenNotPaused
+        override(ERC1155, ERC1155Supply)
+    {
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+    }
+
+}
+
 contract ApocalypseGame is Pausable, Auth {
 
 
@@ -5225,6 +6475,10 @@ contract ApocalypseGame is Pausable, Auth {
     /** FUNCTION **/  
 
     /* General functions */
+
+    function withdrawNative(address payable beneficiary) public onlyOwner {
+        beneficiary.transfer(address(this).balance);
+    }
 
     function pause() public whenNotPaused authorized {
         _pause();
@@ -5926,6 +7180,16 @@ contract ApocalypseMediator is Pausable, Auth {
 
     /* General functions */
 
+    receive() external payable {}
+ 
+    function withdrawTokens(IERC20Extended _token, address beneficiary) public onlyOwner {
+        require(IERC20Extended(_token).transfer(beneficiary, IERC20Extended(_token).balanceOf(address(this))));
+    }
+
+    function withdrawNative(address payable beneficiary) public onlyOwner {
+        beneficiary.transfer(address(this).balance);
+    }
+
     function pause() public whenNotPaused authorized {
         _pause();
     }
@@ -6238,6 +7502,310 @@ contract ApocalypseMediator is Pausable, Auth {
         apocShield.recoverEndurance(_tokenID, _recoverEndurance);
     }
 
+}
+
+contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
+
+    /** LIBRARY **/
+    using SafeMath for uint256;
+    using Address for address;
+    using Strings for string;
+    using Counters for Counters.Counter;
+
+
+    /** DATA **/
+
+    IUniswapV2Router02 public router;
+
+    RewardPoolDistributor public distributor;
     
+    ApocalypseRandomizer public randomizer;
+    ApocalypseCharacter public apocCharacter;
+    ApocalypseMineral public apocMineral;
+
+    IERC20Extended public rewardToken;
+    IERC20Extended public peggedToken;
+
+    Counters.Counter public _pvpID;
+
+    struct pvpInfo {
+        uint256 pvpID;
+        uint256 amountToStake;
+        bool fight;
+        address payable player1;
+        address payable player2;
+    }
+
+    uint256 public minStake;
+    uint256 public statusOffset;
+    uint256 public dropNumber;
+    uint256 public dropOffset;
+    uint256 public dropNumerator;
+    uint256 public dropDenominatorBase;
+    uint256 public rewardTaxNumerator;
+    uint256 public rewardTaxDenominator;
+
+    address public DEAD = 0x000000000000000000000000000000000000dEaD;
+    address public ZERO = 0x0000000000000000000000000000000000000000;
+
+    mapping(uint256 => pvpInfo) public idToPvPInfo;
+    mapping(address => uint256) public fightLost;
+    mapping(address => uint256) public fightWon;
+
+
+    /** CONSTRUCTOR **/
+
+    constructor(
+        IUniswapV2Router02 _router,
+        IERC20Extended _rewardToken,
+        IERC20Extended _peggedToken,
+        ApocalypseRandomizer _randomizer,
+        ApocalypseCharacter _apocCharacter,
+        ApocalypseMineral _apocMineral,
+        RewardPoolDistributor _distributor
+    ) {
+        router = _router;
+        rewardToken = _rewardToken; 
+        peggedToken = _peggedToken;
+        randomizer = _randomizer;
+        apocCharacter = _apocCharacter;
+        apocMineral = _apocMineral;
+        distributor = _distributor;
+
+        minStake = 1000000000000000000;
+        statusOffset = 21;
+        dropNumber = 25;
+        dropOffset = 3;
+        dropNumerator = 30;
+        dropDenominatorBase = 2;
+        rewardTaxNumerator = 20;
+        rewardTaxDenominator = 100;
+    }
+
+
+    /** EVENT **/
+    event ChangeRewardToken(address caller, address prevRewardToken, address newRewardToken);
+    event ChangePeggedToken(address caller, address prevPeggedToken, address newPeggedToken);
+    event ChangeRandomizer(address caller, address prevRandomizer, address newRandomizer);
+    event ChangeApocalypseCharacter(address caller, address prevApocalypseCharacter, address newApocalypseCharacter);
+    event ChangeApocalypseMineral(address caller, address prevApocalypseMineral, address newApocalypseMineral);
+    event ChangeDistributor(address caller, address prevDistributor, address newDistributor);
+    event ChangeRouter(address caller, address prevRouter, address newRouter);
+    event PvPCompleted(uint256 idPvP, address winner, address loser);
+    event CreatePvPRoom(uint256 idPvP, address player1, uint256 stakeAmount);
+    event JoinPvPRoom(uint256 idPvP, address player2, uint256 stakeAmount);
+
+
+    /** FUNCTION **/  
+
+    /* General functions */
+
+    receive() external payable {}
     
+    function pause() public whenNotPaused authorized {
+        _pause();
+    }
+
+    function unpause() public whenPaused onlyOwner {
+        _unpause();
+    }
+
+    function burnAllTokens(IERC20Extended _token) public onlyOwner {
+        require(IERC20Extended(_token).transfer(DEAD, IERC20Extended(_token).balanceOf(address(this))));
+    }
+
+    function burnPartialTokens(IERC20Extended _token, uint256 _numerator, uint256 _denominator) public onlyOwner {
+        uint256 amount = IERC20Extended(_token).balanceOf(address(this)).mul(_numerator).div(_denominator);
+        require(IERC20Extended(_token).transfer(DEAD, amount));
+    }
+
+    function poolAllTokens(IERC20Extended _token) public onlyOwner {
+        require(IERC20Extended(_token).transfer(address(distributor), IERC20Extended(_token).balanceOf(address(this))));
+    }
+
+    function poolPartialTokens(IERC20Extended _token, uint256 _numerator, uint256 _denominator) public onlyOwner {
+        uint256 amount = IERC20Extended(_token).balanceOf(address(this)).mul(_numerator).div(_denominator);
+        require(IERC20Extended(_token).transfer(address(distributor), amount));
+    }
+
+    function withdrawTokens(IERC20Extended _token, address beneficiary) public onlyOwner {
+        require(IERC20Extended(_token).transfer(beneficiary, IERC20Extended(_token).balanceOf(address(this))));
+    }
+
+    function withdrawNative(address payable beneficiary) public onlyOwner {
+        beneficiary.transfer(address(this).balance);
+    }
+
+    /* Update functions */
+
+    function updateMinStake(uint256 _minStake) public authorized {
+        require(minStake >= 1000000000000000000, "Minimum stake cannot be lower than 1 BUSD worth of the token!");
+        require(minStake != _minStake, "This is the current value!");
+        minStake = _minStake;
+    }
+
+    function updateStatusOffset(uint256 _statusOffset) public authorized {
+        require(statusOffset != _statusOffset, "This is the current value!");
+        statusOffset = _statusOffset;
+    }
+
+    function updateDrop(uint256 _dropNumber, uint256 _dropOffset, uint256 _dropNumerator, uint256 _dropDenominatorBase) public authorized {
+        require(dropNumber != _dropNumber, "This is the current value for drop number!");
+        require(dropOffset != _dropOffset, "This is the current value for drop offset!");
+        require(dropNumerator != _dropNumerator, "This is the current value for drop numerator!");
+        require(dropDenominatorBase != _dropDenominatorBase, "This is the current value for drop denominator!");
+        dropNumber = _dropNumber;
+        dropOffset = _dropOffset;
+        dropNumerator = _dropNumerator;
+        dropDenominatorBase = _dropDenominatorBase;
+    }
+
+    function updateRewardTax(uint256 _rewardTaxNumerator, uint256 _rewardTaxDenominator) public authorized {
+        require(_rewardTaxNumerator < _rewardTaxDenominator.mul(40).div(100), "Total tax should not be greater than 40%.");
+        rewardTaxNumerator = _rewardTaxNumerator;
+        rewardTaxDenominator = _rewardTaxDenominator;
+    }
+
+    /* Respective contract functions */
+
+    function changeRewardToken(IERC20Extended _rewardToken) public authorized {
+        address prevRewardToken = address(rewardToken);
+        rewardToken = _rewardToken;
+        emit ChangeRewardToken(_msgSender(), prevRewardToken, address(rewardToken));
+    }
+
+    function changePeggedToken(IERC20Extended _peggedToken) public authorized {
+        address prevPeggedToken = address(peggedToken);
+        peggedToken = _peggedToken;
+        emit ChangePeggedToken(_msgSender(), prevPeggedToken, address(peggedToken));
+    }
+
+    function changeRandomizer(ApocalypseRandomizer _randomizer) public authorized {
+        address prevRandomizer = address(randomizer);
+        randomizer = _randomizer;
+        emit ChangeRandomizer(_msgSender(), prevRandomizer, address(randomizer));
+    }
+
+    function changeApocalypseCharacter(ApocalypseCharacter _apocCharacter) public authorized {
+        address prevApocalypseCharacter = address(apocCharacter);
+        apocCharacter = _apocCharacter;
+        emit ChangeApocalypseCharacter(_msgSender(), prevApocalypseCharacter, address(_apocCharacter));
+    }
+
+    function changeApocalypseMineral(ApocalypseMineral _apocMineral) public authorized {
+        address prevApocalypseMineral = address(apocMineral);
+        apocMineral = _apocMineral;
+        emit ChangeApocalypseMineral(_msgSender(), prevApocalypseMineral, address(_apocMineral));
+    }
+
+    function changeDistributor(RewardPoolDistributor _distributor) public authorized {
+        address prevDistributor = address(distributor);
+        distributor = _distributor;
+        emit ChangeDistributor(_msgSender(), prevDistributor, address(distributor));
+    }
+
+    function changeRouter(IUniswapV2Router02 _router) public authorized {
+        address prevRouter = address(router);
+        router = _router;
+        emit ChangeRouter(_msgSender(), prevRouter, address(router));
+    }
+
+    /* Check functions */
+
+    function checkPrice(uint256 _priceBUSD, IERC20Extended _token) public view returns (uint256) {
+        address[] memory path = new address[](3);
+        path[0] = address(_token);
+        path[1] = router.WETH();
+        path[2] = address(peggedToken);
+        return router.getAmountsIn(_priceBUSD, path)[0];
+    }
+
+    function mixer(address _player1, address _player2) public view returns (uint256, uint256) {
+        uint256 random = randomizer.randomNGenerator(uint256(uint160(_player1)), uint256(uint160(_player2)), block.timestamp);
+        uint256 _status = randomizer.sliceNumber(random, 2, 1, statusOffset);
+        uint256 _drop = randomizer.sliceNumber(random, dropNumber, 1, dropOffset);
+        return (_status, _drop);
+    }
+
+    /* Drop functions */
+
+    function dropMineral(address _account) internal {
+        uint256 _minerals = apocMineral.getTotalMineralTypes();
+        uint256 random = randomizer.randomNGenerator(_minerals, uint256(uint160(_account)), block.timestamp);
+        
+        uint256 _possibility = randomizer.sliceNumber(random, 10, dropDenominatorBase, _minerals.div(2));
+        if (_possibility > dropNumerator) {
+            return;
+        }
+        
+        uint256 _confirmation = randomizer.sliceNumber(random, 10, dropDenominatorBase, _minerals);
+        uint256 _types = randomizer.sliceNumber(random, _minerals, 1, _minerals.div(2));
+        if (_confirmation <= apocMineral.getMineralPVPDropChance(_types)) {
+            apocMineral.mint(_account, _types, 1, bytes(""));
+        }
+
+    }
+
+    /* PvP logic */
+
+    /**
+     * @dev Create a new PvP listing.
+     */
+    function createPvPRoom(uint256 _price) public payable whenNotPaused nonReentrant {
+
+        require(_price >= minStake, "Price must be greater than the minimum amount allowed!");
+
+        _pvpID.increment();
+        uint256 _getPvPID = _pvpID.current();
+
+        idToPvPInfo[_getPvPID] =  pvpInfo(_getPvPID, _price, false, payable(_msgSender()), payable(ZERO));
+
+        uint256 _amount = checkPrice(_price, rewardToken);
+        rewardToken.transferFrom(_msgSender(), address(this), _amount);
+
+        emit CreatePvPRoom(_getPvPID, _msgSender(), _amount);
+    }
+
+    /**
+     * @dev Join listed PvP room.
+     */
+    function joinPvPRoom(uint256 _ID) public payable whenNotPaused nonReentrant {
+
+        require(_ID > 0 && _ID <= _pvpID.current(), "This PvP fight does not exist!");
+        require(idToPvPInfo[_ID].fight == false, "This PvP fight already ended!");
+
+        uint256 _amount = idToPvPInfo[_ID].amountToStake;
+        address _player1 = idToPvPInfo[_ID].player1;
+        address _player2 = idToPvPInfo[_ID].player2;
+        
+        rewardToken.transferFrom(_msgSender(), address(this), _amount);
+
+        idToPvPInfo[_ID].player2 = payable(_msgSender());
+        emit JoinPvPRoom(_ID, _msgSender(), _amount);
+        
+        uint256 _tax = (_amount.mul(rewardTaxNumerator)).div(rewardTaxDenominator);
+        uint256 _winnerReward = (_amount.sub(_tax)).mul(2);
+
+        uint256 _status; 
+        uint256 _drop; 
+        (_status , _drop) = mixer(_player1, _player2);
+
+        if (_status == 0) {
+            IERC20Extended(rewardToken).transfer(_player1, _winnerReward);
+            fightWon[_player1] = fightWon[_player1] + 1;
+            dropMineral(_player2);
+            fightLost[_player2] = fightLost[_player2] + 1;
+            emit PvPCompleted(_ID, _player1, _player2);
+        } else if (_status == 1) {
+            IERC20Extended(rewardToken).transfer(_player2, _winnerReward);
+            fightWon[_player2] = fightWon[_player2] + 1;
+            dropMineral(_player1);
+            fightLost[_player1] = fightLost[_player1] + 1;
+            emit PvPCompleted(_ID, _player2, _player1);
+        }
+                
+        idToPvPInfo[_ID].fight = true;
+
+    }
+
 }
