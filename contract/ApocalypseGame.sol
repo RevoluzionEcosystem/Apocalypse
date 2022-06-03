@@ -7531,6 +7531,8 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
     struct pvpInfo {
         uint256 pvpID;
         uint256 amountToStake;
+        uint256 charIDP1;
+        uint256 charIDP2;
         bool fight;
         address payable player1;
         address payable player2;
@@ -7751,14 +7753,15 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
     /**
      * @dev Create a new PvP listing.
      */
-    function createPvPRoom(uint256 _price) public payable whenNotPaused nonReentrant {
+    function createPvPRoom(uint256 _charID, uint256 _price) public payable whenNotPaused nonReentrant {
 
         require(_price >= minStake, "Price must be greater than the minimum amount allowed!");
+        require(apocCharacter.ownerOf(_charID) == _msgSender(), "You are not the owner of this character!");
 
         _pvpID.increment();
         uint256 _getPvPID = _pvpID.current();
 
-        idToPvPInfo[_getPvPID] =  pvpInfo(_getPvPID, _price, false, payable(_msgSender()), payable(ZERO));
+        idToPvPInfo[_getPvPID] =  pvpInfo(_getPvPID, _price, _charID, 0, false, payable(_msgSender()), payable(ZERO));
 
         uint256 _amount = checkPrice(_price, rewardToken);
         rewardToken.transferFrom(_msgSender(), address(this), _amount);
@@ -7769,19 +7772,21 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
     /**
      * @dev Join listed PvP room.
      */
-    function joinPvPRoom(uint256 _ID) public payable whenNotPaused nonReentrant {
+    function joinPvPRoom(uint256 _charID, uint256 _roomID) public payable whenNotPaused nonReentrant {
 
-        require(_ID > 0 && _ID <= _pvpID.current(), "This PvP fight does not exist!");
-        require(idToPvPInfo[_ID].fight == false, "This PvP fight already ended!");
+        require(_roomID > 0 && _roomID <= _pvpID.current(), "This PvP fight does not exist!");
+        require(idToPvPInfo[_roomID].fight == false, "This PvP fight already ended!");
+        require(apocCharacter.ownerOf(_charID) == _msgSender(), "You are not the owner of this character!");
 
-        uint256 _amount = idToPvPInfo[_ID].amountToStake;
-        address _player1 = idToPvPInfo[_ID].player1;
-        address _player2 = idToPvPInfo[_ID].player2;
+        uint256 _amount = idToPvPInfo[_roomID].amountToStake;
+        address _player1 = idToPvPInfo[_roomID].player1;
+        address _player2 = idToPvPInfo[_roomID].player2;
         
         rewardToken.transferFrom(_msgSender(), address(this), _amount);
 
-        idToPvPInfo[_ID].player2 = payable(_msgSender());
-        emit JoinPvPRoom(_ID, _msgSender(), _amount);
+        idToPvPInfo[_roomID].player2 = payable(_msgSender());
+        idToPvPInfo[_roomID].charIDP2 = _charID;
+        emit JoinPvPRoom(_roomID, _msgSender(), _amount);
         
         uint256 _tax = (_amount.mul(rewardTaxNumerator)).div(rewardTaxDenominator);
         uint256 _winnerReward = (_amount.sub(_tax)).mul(2);
@@ -7795,16 +7800,16 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
             fightWon[_player1] = fightWon[_player1] + 1;
             dropMineral(_player2);
             fightLost[_player2] = fightLost[_player2] + 1;
-            emit PvPCompleted(_ID, _player1, _player2);
+            emit PvPCompleted(_roomID, _player1, _player2);
         } else if (_status == 1) {
             IERC20Extended(rewardToken).transfer(_player2, _winnerReward);
             fightWon[_player2] = fightWon[_player2] + 1;
             dropMineral(_player1);
             fightLost[_player1] = fightLost[_player1] + 1;
-            emit PvPCompleted(_ID, _player2, _player1);
+            emit PvPCompleted(_roomID, _player2, _player1);
         }
                 
-        idToPvPInfo[_ID].fight = true;
+        idToPvPInfo[_roomID].fight = true;
 
     }
 
