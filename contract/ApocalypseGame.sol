@@ -7806,7 +7806,9 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
      */
     function createPvPRoom(uint256 _charID, uint256 _price) public payable whenNotPaused nonReentrant {
 
-        require(_price >= minStake, "Price must be greater than the minimum amount allowed!");
+        uint256 _amount = checkPrice(minStake, rewardToken);
+
+        require(_price >= _amount, "Price must be greater than the minimum amount allowed!");
         require(apocCharacter.ownerOf(_charID) == _msgSender(), "You are not the owner of this character!");
 
         _pvpID.increment();
@@ -7814,8 +7816,7 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
 
         idToPvPInfo[_getPvPID] =  pvpInfo(_getPvPID, _price, _charID, 0, false, payable(_msgSender()), payable(ZERO));
 
-        uint256 _amount = checkPrice(_price, rewardToken);
-        rewardToken.transferFrom(_msgSender(), address(this), _amount);
+        rewardToken.transferFrom(_msgSender(), address(this), _price);
 
         emit CreatePvPRoom(_getPvPID, _msgSender(), _amount);
     }
