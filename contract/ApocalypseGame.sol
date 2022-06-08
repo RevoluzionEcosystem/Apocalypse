@@ -7622,12 +7622,63 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
     }
 
     function poolAllTokens(IERC20Extended _token) public onlyOwner {
-        require(IERC20Extended(_token).transfer(address(distributor), IERC20Extended(_token).balanceOf(address(this))));
+        
+        address[] memory path1 = new address[](2);
+        path1[0] = address(_token);
+        path1[1] = router.WETH();
+        
+        uint256 balanceBefore = address(this).balance;
+
+        router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+            IERC20Extended(_token).balanceOf(address(this)),
+            0,
+            path1,
+            address(this),
+            block.timestamp
+        );
+
+        uint256 amountBNB = address(this).balance.sub(balanceBefore);
+
+        address[] memory path2 = new address[](2);
+        path2[0] = router.WETH();
+        path2[1] = address(peggedToken);
+
+        router.swapExactETHForTokensSupportingFeeOnTransferTokens {
+            value: amountBNB
+        } (0, path2, address(this), block.timestamp);
+        
+        require(IERC20Extended(peggedToken).transfer(address(distributor), IERC20Extended(peggedToken).balanceOf(address(this))));
     }
 
     function poolPartialTokens(IERC20Extended _token, uint256 _numerator, uint256 _denominator) public onlyOwner {
+         
         uint256 amount = IERC20Extended(_token).balanceOf(address(this)).mul(_numerator).div(_denominator);
-        require(IERC20Extended(_token).transfer(address(distributor), amount));
+
+        address[] memory path1 = new address[](2);
+        path1[0] = address(_token);
+        path1[1] = router.WETH();
+        
+        uint256 balanceBefore = address(this).balance;
+
+        router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+            amount,
+            0,
+            path1,
+            address(this),
+            block.timestamp
+        );
+
+        uint256 amountBNB = address(this).balance.sub(balanceBefore);
+
+        address[] memory path2 = new address[](2);
+        path2[0] = router.WETH();
+        path2[1] = address(peggedToken);
+
+        router.swapExactETHForTokensSupportingFeeOnTransferTokens {
+            value: amountBNB
+        } (0, path2, address(this), block.timestamp);
+
+        require(IERC20Extended(peggedToken).transfer(address(distributor), IERC20Extended(peggedToken).balanceOf(address(this))));
     }
 
     function withdrawTokens(IERC20Extended _token, address beneficiary) public onlyOwner {
@@ -7779,18 +7830,19 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
         require(apocCharacter.ownerOf(_charID) == _msgSender(), "You are not the owner of this character!");
 
         uint256 _amount = idToPvPInfo[_roomID].amountToStake;
-        address _player1 = idToPvPInfo[_roomID].player1;
-        address _player2 = idToPvPInfo[_roomID].player2;
         
         rewardToken.transferFrom(_msgSender(), address(this), _amount);
 
         idToPvPInfo[_roomID].player2 = payable(_msgSender());
         idToPvPInfo[_roomID].charIDP2 = _charID;
+        
         emit JoinPvPRoom(_roomID, _msgSender(), _amount);
         
         uint256 _tax = (_amount.mul(rewardTaxNumerator)).div(rewardTaxDenominator);
         uint256 _winnerReward = (_amount.sub(_tax)).mul(2);
 
+        address _player1 = idToPvPInfo[_roomID].player1;
+        address _player2 = idToPvPInfo[_roomID].player2;
         uint256 _status; 
         uint256 _drop; 
         (_status , _drop) = mixer(_player1, _player2);
@@ -7812,5 +7864,4 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
         idToPvPInfo[_roomID].fight = true;
 
     }
-
 }
