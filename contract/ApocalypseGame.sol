@@ -6412,6 +6412,20 @@ contract ApocalypseGame is Pausable, Auth {
         uint256 shieldID2;
     }
 
+    uint256 public maxLevel;
+    uint256 public baseHP;
+    uint256 public upgradeBaseHP;
+    uint256 public baseNextXP;
+    uint256 public addDef;
+    uint256 public hpRequireBase;
+
+    uint256 public hpRecovery;
+    uint256 public durationHPRecover;
+    uint256 public xpGain;
+    uint256 public enduranceDeduction;
+
+    uint256[] public baseWinningRate;
+
     mapping(address => CharacterSlot) public charSlot;
 
 
@@ -6436,6 +6450,19 @@ contract ApocalypseGame is Pausable, Auth {
         apocShield = _apocShield;
         distributor = _distributor;
 
+        maxLevel = 50;
+        baseHP = 1000;
+        upgradeBaseHP = 1500;
+        baseNextXP = 1000;
+        addDef = 3;
+
+        hpRequireBase = 250;
+        xpGain = 100;
+        enduranceDeduction = 10;
+        hpRecovery = 1;
+        durationHPRecover = 36;
+
+        baseWinningRate = [90,89,88,87,86,85,84,83,82,81,80,79,78,77,76,75,74,73,72,71,70,69,68,67,66,65,64,63,62,61,60,59,58,57,56,55,54,53,52,51,50,49,48,47,46,45,44,43,42,41];
     }
 
 
@@ -6491,15 +6518,449 @@ contract ApocalypseGame is Pausable, Auth {
 
     /* Default stats functions */
 
+    function setDefaultInfo(uint256 _maxLevel, uint256 _hpRequireBase, uint256 _baseHP, uint256 _upgradeBaseHP, uint256 _baseNextXP, uint256 _addDef) public onlyOwner {
+        require(_maxLevel > 0 && _hpRequireBase > 0 && _baseHP > 0 && _upgradeBaseHP > 0 && _baseNextXP > 0 && _addDef > 0, "None of the value can be set as 0.");
+        maxLevel = _maxLevel;
+        hpRequireBase = _hpRequireBase;
+        baseHP = _baseHP;
+        upgradeBaseHP = _upgradeBaseHP;
+        baseNextXP =_baseNextXP;
+        addDef = _addDef;
+        apocCharacter.setDefaultInfo(_maxLevel, _baseHP, _upgradeBaseHP, _baseNextXP, _addDef);
+    }
+
+    function addBaseWinningRate(uint256[] memory _baseWinningRate) public onlyOwner {
+        for(uint256 i = 0; i < _baseWinningRate.length; i++){
+            baseWinningRate.push(_baseWinningRate[i]);
+        }
+    }
+    
+    function updateBaseWinningRate(uint256 _characterLevel, uint256 _baseWinningRate) public onlyOwner {
+        require(_characterLevel > 0 && _baseWinningRate > 0, "Character level and base winning rate cannot be set as 0.");
+        require(_characterLevel <= maxLevel, "Character level should be lesser or equal to max level.");
+        baseWinningRate[_characterLevel - 1] = _baseWinningRate;
+    }
+    
+    function updateGameLogic(uint256 _enduranceDeduction, uint256 _xpGain, uint256 _hpRecovery, uint256 _durationHPRecover) public onlyOwner {
+        require(_enduranceDeduction > 0 && _xpGain > 0 && _durationHPRecover > 0 && _hpRecovery > 0, "None of the value can be set as 0.");
+        enduranceDeduction = _enduranceDeduction;
+        xpGain = _xpGain;
+        durationHPRecover = _durationHPRecover;
+        hpRecovery = _hpRecovery;
+    }
+
+    function recoverHP(uint256 _slot) public whenNotPaused {
+
+        if (_slot == 1) {
+            uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate1);
+            uint256 recover = duration.mul(hpRecovery).div(durationHPRecover);
+            apocCharacter.recoverHP(charSlot[_msgSender()].tokenID1, recover);
+            charSlot[_msgSender()].lastHPUpdate1 = block.timestamp;
+        } else if (_slot == 2) {
+            uint256 duration = block.timestamp.sub(charSlot[_msgSender()].lastHPUpdate2);
+            uint256 recover = duration.mul(hpRecovery).div(durationHPRecover);
+            apocCharacter.recoverHP(charSlot[_msgSender()].tokenID2, recover);
+            charSlot[_msgSender()].lastHPUpdate2 = block.timestamp;
+        }
+    }
 
     /* Check functions */
 
-        
+    function getSuccessRate(uint256 _tokenID, uint256 _weaponAttack) public view returns(uint256) {
+        uint256 success = baseWinningRate[apocCharacter.getCharLevel(_tokenID).sub(1)].mul(100);
+        uint256 failure = uint256(100).mul(100).sub(success);
+        uint256 totalAttack = apocCharacter.getBaseAttack(_tokenID).add(apocCharacter.getAngelModifier(_tokenID)).add(_weaponAttack);
+        return success.add(totalAttack.mul(failure).div(200));
+    }
+
+    function getHPRequired(uint256 _tokenID) public view returns(uint256) {
+        return (apocCharacter.getCharLevel(_tokenID).sub(1)).mul(10).add(hpRequireBase);
+    }
+
+    function mixer(uint256 _charTokenID) internal view returns (uint256) {
+        uint256 userAddress = uint256(uint160(_msgSender()));
+        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, block.number);
+        return randomizer.sliceNumber(random, 10, 4, apocCharacter.getCharLevel(_charTokenID));
+    }
+
+    function checkFight(uint256 _charTokenID, uint256 _charWeaponID, uint256 _rand) internal view returns (bool) {
+        if (
+            apocCharacter.getCharType(_charTokenID) == 0 &&
+            getSuccessRate(_charTokenID, apocWeapon.getBaseAttack(_charWeaponID)) >= _rand
+        ) {
+            return true;
+        } else if (
+            apocCharacter.getCharType(_charTokenID) == 1 &&
+            getSuccessRate(_charTokenID, apocWand.getBaseAttack(_charWeaponID)) >= _rand
+        ) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    function checkHPRecovery(uint256 _slot) internal {
+        if (
+            apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID1) <= 1 &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID1) < apocCharacter.getBaseHP() &&
+            _slot == 1
+        ) {
+            recoverHP(1);
+        } else if (
+            apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID1) > 1 &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID1) < apocCharacter.getUpgradeBaseHP() &&
+            _slot == 1
+        ) {
+            recoverHP(1);
+        } else if (
+            apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID2) <= 1 &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID2) < apocCharacter.getBaseHP() &&
+            _slot == 2
+        ) {
+            recoverHP(2);
+        } else if (
+            apocCharacter.getCharStatus(charSlot[_msgSender()].tokenID2) > 1 &&
+            apocCharacter.getCharHP(charSlot[_msgSender()].tokenID2) < apocCharacter.getUpgradeBaseHP() &&
+            _slot == 2
+        ) {
+            recoverHP(2);
+        }
+    }
+
+    function checkShieldEquip(uint256 _tokenID) internal {
+        if(
+            apocShield.getShieldEquip(_tokenID) == true && 
+            charSlot[_msgSender()].shieldID1 != _tokenID &&
+            charSlot[_msgSender()].shieldID2 != _tokenID
+        ) {
+            apocShield.updateShieldEquip(_tokenID, false);
+        }
+
+        apocShield.updateShieldEquip(_tokenID, true);
+    }
+
+    function checkWandEquip(uint256 _tokenID) internal {
+        if(
+            apocWand.getWandEquip(_tokenID) == true && 
+            charSlot[_msgSender()].weaponID1 != _tokenID &&
+            charSlot[_msgSender()].weaponID2 != _tokenID
+        ) {
+            apocWand.updateWandEquip(_tokenID, false);
+        }
+
+        apocWand.updateWandEquip(_tokenID, true);
+    }
+
+    function checkWeaponEquip(uint256 _tokenID) internal {
+        if(
+            apocWeapon.getWeaponEquip(_tokenID) == true && 
+            charSlot[_msgSender()].weaponID1 != _tokenID &&
+            charSlot[_msgSender()].weaponID2 != _tokenID
+        ) {
+            apocWeapon.updateWeaponEquip(_tokenID, false);
+        }
+
+        apocWeapon.updateWeaponEquip(_tokenID, true);
+    }
+
+    function checkCharacterEquip(uint256 _tokenID) internal {
+        if(
+            apocCharacter.getCharEquip(_tokenID) == true && 
+            charSlot[_msgSender()].tokenID1 != _tokenID &&
+            charSlot[_msgSender()].tokenID2 != _tokenID
+        ) {
+            apocCharacter.updateCharacterEquip(_tokenID, false);
+        }
+
+        apocCharacter.updateCharacterEquip(_tokenID, true);
+    }
+
+    function canFight(uint256 _getCharacterID, uint256 _getWeaponID, uint256 _getShieldID) internal view returns (bool) {
+        require(
+            apocCharacter.ownerOf(_getCharacterID) == _msgSender() &&
+            apocCharacter.getCharHP(_getCharacterID) > getHPRequired(_getCharacterID) &&
+            apocCharacter.getCharEquip(_getCharacterID) == true &&
+            apocCharacter.getCharXP(_getCharacterID) != apocCharacter.getCharNextXP(_getCharacterID) &&
+            apocShield.ownerOf(_getShieldID) == _msgSender() &&
+            apocShield.getShieldEquip(_getShieldID) == true &&
+            apocShield.getShieldEndurance(_getShieldID) > 0
+        );
+        if (apocCharacter.getCharType(_getCharacterID) == 0) {
+            require(
+                apocWeapon.ownerOf(_getWeaponID) == _msgSender() &&
+                apocWeapon.getWeaponEquip(_getWeaponID) == true &&
+                apocWeapon.getWeaponEndurance(_getWeaponID) > 0
+            );
+        } else if (apocCharacter.getCharType(_getCharacterID) == 1) {
+            require(
+                apocWand.ownerOf(_getWeaponID) == _msgSender() &&
+                apocWand.getWandEquip(_getWeaponID) == true &&
+                apocWand.getWandEndurance(_getWeaponID) > 0
+            );
+        }
+        return true;
+    }
+
     /* Equip functions */
 
+    function equipCharSlot1(uint256 _tokenID) external whenNotPaused {
+        if(_msgSender() != owner()) {
+            require(_tokenID > 0);
+        }
+        require(apocCharacter.ownerOf(_tokenID) == _msgSender());
+
+        checkCharacterEquip(_tokenID);
+
+        if (charSlot[_msgSender()].lastHPUpdate1 == 0) {
+            checkHPRecovery(1);
+        }
+        charSlot[_msgSender()].tokenID1 = _tokenID;
+        charSlot[_msgSender()].lastHPUpdate1 = block.timestamp;
+    }
+
+    function equipCharSlot2(uint256 _tokenID) external whenNotPaused {
+        if(_msgSender() != owner()) {
+            require(_tokenID > 0);
+        }
+        require(apocCharacter.ownerOf(_tokenID) == _msgSender());
+
+        checkCharacterEquip(_tokenID);
+
+        if (charSlot[_msgSender()].lastHPUpdate2 == 0) {
+            checkHPRecovery(2);
+        }
+        charSlot[_msgSender()].tokenID2 = _tokenID;
+        charSlot[_msgSender()].lastHPUpdate2 = block.timestamp;
+    }
+
+    function equipWeaponWandSlot1(uint256 _tokenID) external whenNotPaused {
+        if(_msgSender() != owner()) {
+            require(_tokenID > 0);
+        }
+
+        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 0) {
+            require(
+                apocWeapon.ownerOf(_tokenID) == _msgSender() &&
+                apocWeapon.getWeaponType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID1) &&
+                apocWeapon.getWeaponEndurance(_tokenID) > 0
+            );
+
+            checkWeaponEquip(_tokenID);
+            
+            charSlot[_msgSender()].weaponID1 = _tokenID;
+        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 1) {
+            require(
+                apocWand.ownerOf(_tokenID) == _msgSender() &&
+                apocWand.getWandType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID1) &&
+                apocWand.getWandEndurance(_tokenID) > 0
+            );
+
+            checkWandEquip(_tokenID);
+            
+            charSlot[_msgSender()].weaponID1 = _tokenID;
+        }
+    }
+
+    function equipWeaponWandSlot2(uint256 _tokenID) external whenNotPaused {
+        if(_msgSender() != owner()) {
+            require(_tokenID > 0);
+        }
+
+        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 0) {
+            require(
+                apocWeapon.ownerOf(_tokenID) == _msgSender() &&
+                apocWeapon.getWeaponType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID2) &&
+                apocWeapon.getWeaponEndurance(_tokenID) > 0
+            );
+
+            checkWeaponEquip(_tokenID);
+            
+            charSlot[_msgSender()].weaponID2 = _tokenID;
+        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 1) {
+            require(
+                apocWand.ownerOf(_tokenID) == _msgSender() &&
+                apocWand.getWandType(_tokenID) == apocCharacter.getCharSkill(charSlot[_msgSender()].tokenID2) &&
+                apocWand.getWandEndurance(_tokenID) > 0
+            );
+
+            checkWandEquip(_tokenID);
+            
+            charSlot[_msgSender()].weaponID2 = _tokenID;
+        }
+    }
+
+    function equipShieldSlot1(uint256 _tokenID) external whenNotPaused {
+        if(_msgSender() != owner()) {
+            require(_tokenID > 0);
+        }
+        require(
+            apocShield.ownerOf(_tokenID) == _msgSender() &&
+            apocShield.getShieldEndurance(_tokenID) > 0
+        );
+        
+        checkShieldEquip(_tokenID);
+
+        charSlot[_msgSender()].shieldID1 = _tokenID;
+    }
+
+    function equipShieldSlot2(uint256 _tokenID) external whenNotPaused {
+        if(_msgSender() != owner()) {
+            require(_tokenID > 0);
+        }
+        require(
+            apocShield.ownerOf(_tokenID) == _msgSender() &&
+            apocShield.getShieldEndurance(_tokenID) > 0
+        );
+
+        checkShieldEquip(_tokenID);
+
+        charSlot[_msgSender()].shieldID2 = _tokenID;
+    }
+
+    /* Unequip functions */
+
+    function unequipCharSlot1() public whenNotPaused {
+        checkHPRecovery(1);
+        apocCharacter.updateCharacterEquip(charSlot[_msgSender()].tokenID1, false);
+        charSlot[_msgSender()].tokenID1 = 0;
+    }
+
+    function unequipCharSlot2() public whenNotPaused {
+        checkHPRecovery(2);
+        apocCharacter.updateCharacterEquip(charSlot[_msgSender()].tokenID2, false);
+        charSlot[_msgSender()].tokenID2 = 0;
+    }
+
+    function unequipWeaponWandSlot1() public whenNotPaused {
+        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 0 && apocWeapon.ownerOf(charSlot[_msgSender()].weaponID1) != _msgSender()) {
+            apocWand.updateWandEquip(charSlot[_msgSender()].weaponID1, false);
+        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 0) {
+            apocWeapon.updateWeaponEquip(charSlot[_msgSender()].weaponID1, false);
+        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 1 && apocWand.ownerOf(charSlot[_msgSender()].weaponID1) != _msgSender()) {
+            apocWeapon.updateWeaponEquip(charSlot[_msgSender()].weaponID1, false);
+        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID1) == 1) {
+            apocWand.updateWandEquip(charSlot[_msgSender()].weaponID1, false);
+        }
+
+        charSlot[_msgSender()].weaponID1 = 0;
+    }
+
+    function unequipWeaponWandSlot2() public whenNotPaused {
+        if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 0 && apocWeapon.ownerOf(charSlot[_msgSender()].weaponID2) != _msgSender()) {
+            apocWand.updateWandEquip(charSlot[_msgSender()].weaponID2, false);
+        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 0) {
+            apocWeapon.updateWeaponEquip(charSlot[_msgSender()].weaponID2, false);
+        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 0 && apocWeapon.ownerOf(charSlot[_msgSender()].weaponID2) != _msgSender()) {
+            apocWeapon.updateWeaponEquip(charSlot[_msgSender()].weaponID2, false);
+        } else if (apocCharacter.getCharType(charSlot[_msgSender()].tokenID2) == 1) {
+            apocWand.updateWandEquip(charSlot[_msgSender()].weaponID2, false);
+        }
+        
+        charSlot[_msgSender()].weaponID2 = 0;
+    }
+
+    function unequipShieldSlot1() public whenNotPaused {
+        apocShield.updateShieldEquip(charSlot[_msgSender()].shieldID1, false);
+        charSlot[_msgSender()].shieldID1 = 0;
+    }
+
+    function unequipShieldSlot2() public whenNotPaused {
+        apocShield.updateShieldEquip(charSlot[_msgSender()].shieldID2, false);
+        charSlot[_msgSender()].shieldID2 = 0;
+    }
+
+    function forceUnequipSlot1() public whenNotPaused {
+        charSlot[_msgSender()].tokenID1 = 0;
+        charSlot[_msgSender()].weaponID1 = 0;
+        charSlot[_msgSender()].shieldID1 = 0;
+    }
+
+    function forceUnequipSlot2() public whenNotPaused {
+        charSlot[_msgSender()].tokenID2 = 0;
+        charSlot[_msgSender()].weaponID2 = 0;
+        charSlot[_msgSender()].shieldID2 = 0;
+    }
 
     /* Fight functions */
+    
+    function updateCharacter(bool fightStatus, uint256 tokenId, uint256 shieldID, address account) internal {
+        if (fightStatus == true) {
+            uint256 totalDefence = apocCharacter.getBaseDefence(tokenId).add(apocCharacter.getAngelModifier(tokenId)).add(apocShield.getBaseDefence(shieldID));
+            uint256 _reduceHP = getHPRequired(tokenId).sub(totalDefence);
+            apocCharacter.reduceHP(tokenId, _reduceHP);
+            apocCharacter.receiveXP(tokenId, xpGain);
+            distributor.distributeReward(_msgSender(), apocCharacter.getCharLevel(tokenId).mul(10**rewardToken.decimals()));
 
+            emit FightWon(account);
+        } else if (fightStatus == false) {
+            apocCharacter.reduceHP(tokenId, getHPRequired(tokenId));
+            emit FightLost(account);
+        }
+    }
+
+    function reduceWeaponWandEndurance(uint256 _charTokenID, uint256 _charWeaponID) internal {
+        if (apocCharacter.getCharType(_charTokenID) == 0) {
+            apocWeapon.reduceEndurance(_charWeaponID, enduranceDeduction);
+        } else if (apocCharacter.getCharType(_charTokenID) == 1) {
+            apocWand.reduceEndurance(_charWeaponID, enduranceDeduction);
+        }
+    }
+
+    function fightSlot1() public whenNotPaused returns (bool){
+        
+        checkHPRecovery(1);
+
+        uint256 _charTokenID = charSlot[_msgSender()].tokenID1;
+        uint256 _charWeaponID = charSlot[_msgSender()].weaponID1;
+        uint256 _charShieldID = charSlot[_msgSender()].shieldID1;
+
+        if (_msgSender() != owner()) {
+            require(_charTokenID != 0 && _charWeaponID != 0 && _charShieldID != 0);
+        }
+
+        require(canFight(_charTokenID, _charWeaponID, _charShieldID) == true);
+        
+        apocShield.reduceEndurance(_charShieldID, enduranceDeduction);
+
+        reduceWeaponWandEndurance(_charTokenID, _charWeaponID);
+
+        uint256 rand = mixer(_charTokenID);
+
+        bool fightStatus = checkFight(_charTokenID, _charWeaponID, rand);
+
+        updateCharacter(fightStatus, charSlot[_msgSender()].tokenID1, _charShieldID, _msgSender());
+
+        return (fightStatus);
+
+    }
+
+    function fightSlot2() public whenNotPaused returns (bool){
+
+        checkHPRecovery(2);
+
+        uint256 _charTokenID = charSlot[_msgSender()].tokenID2;
+        uint256 _charWeaponID = charSlot[_msgSender()].weaponID2;
+        uint256 _charShieldID = charSlot[_msgSender()].shieldID2;
+
+        if (_msgSender() != owner()) {
+            require(_charTokenID != 0 && _charWeaponID != 0 && _charShieldID != 0);
+        }
+
+        require(canFight(_charTokenID, _charWeaponID, _charShieldID) == true);
+        
+        apocShield.reduceEndurance(_charShieldID, enduranceDeduction);
+
+        reduceWeaponWandEndurance(_charTokenID, _charWeaponID);
+
+        uint256 rand = mixer(_charTokenID);
+
+        bool fightStatus = checkFight(_charTokenID, _charWeaponID, rand);
+
+        updateCharacter(fightStatus, charSlot[_msgSender()].tokenID2, _charShieldID, _msgSender());
+
+        return (fightStatus);
+
+    }
 
 }
 
