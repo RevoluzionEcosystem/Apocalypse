@@ -2559,7 +2559,7 @@ interface IRewardPoolDistributor {
 
 }
 
-contract RewardPoolDistributor is IRewardPoolDistributor, Auth {
+contract RewardPoolDistributor is IRewardPoolDistributor, Auth, Pausable {
     
 
     /* LIBRARY */
@@ -2634,6 +2634,14 @@ contract RewardPoolDistributor is IRewardPoolDistributor, Auth {
     /* FUNCTION */
 
     receive() external payable {}
+
+    function pause() public whenNotPaused authorized {
+        _pause();
+    }
+
+    function unpause() public whenPaused onlyOwner {
+        _unpause();
+    }
  
     function withdrawAllTokens(IERC20Extended token_, address beneficiary) public onlyOwner {
         require(IERC20Extended(token_).transfer(beneficiary, IERC20Extended(token_).balanceOf(address(this))));
@@ -2696,7 +2704,7 @@ contract RewardPoolDistributor is IRewardPoolDistributor, Auth {
         rewards[_msgSender()].totalAccumulated = rewards[_msgSender()].totalAccumulated.add(prevTotalAccumulated);
     }
 
-    function withdrawReward(uint256 _amount) external {
+    function withdrawReward(uint256 _amount) external whenNotPaused {
         if (needResetTimeLimit(_msgSender()) == true) {
             resetTimeLimit(_msgSender());
         } 
