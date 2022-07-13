@@ -2559,7 +2559,7 @@ interface IRewardPoolDistributor {
 
 }
 
-contract RewardPoolDistributor is IRewardPoolDistributor, Auth, Pausable {
+contract RewardPoolDistributor is IRewardPoolDistributor, Auth {
     
 
     /* LIBRARY */
@@ -2634,14 +2634,6 @@ contract RewardPoolDistributor is IRewardPoolDistributor, Auth, Pausable {
     /* FUNCTION */
 
     receive() external payable {}
-
-    function pause() public whenNotPaused authorized {
-        _pause();
-    }
-
-    function unpause() public whenPaused onlyOwner {
-        _unpause();
-    }
  
     function withdrawAllTokens(IERC20Extended token_, address beneficiary) public onlyOwner {
         require(IERC20Extended(token_).transfer(beneficiary, IERC20Extended(token_).balanceOf(address(this))));
@@ -2704,7 +2696,7 @@ contract RewardPoolDistributor is IRewardPoolDistributor, Auth, Pausable {
         rewards[_msgSender()].totalAccumulated = rewards[_msgSender()].totalAccumulated.add(prevTotalAccumulated);
     }
 
-    function withdrawReward(uint256 _amount) external whenNotPaused {
+    function withdrawReward(uint256 _amount) external {
         if (needResetTimeLimit(_msgSender()) == true) {
             resetTimeLimit(_msgSender());
         } 
@@ -6991,49 +6983,31 @@ contract ApocalypseMediator is Pausable, Auth {
     ApocalypseWand public apocWand;
     ApocalypseShield public apocShield;
 
-    IERC20Extended public mintCharacterToken;
-    IERC20Extended public mintWeaponToken;
-    IERC20Extended public mintWandToken;
-    IERC20Extended public mintShieldToken;
     IERC20Extended public rewardToken;
 
-    IERC20Extended public upgradeCharacterToken;
-    IERC20Extended public levelUpCharacterToken;
-    IERC20Extended public levelUpWeaponToken;
-    IERC20Extended public levelUpWandToken;
-    IERC20Extended public levelUpShieldToken;
+    IERC20Extended public recoverToken;
+    IERC20Extended[3] public repairToken; // weapon, wand, shield
+    IERC20Extended[4] public levelUpToken; // character, weapon, wand, shield
+    IERC20Extended[4] public mintToken; // character, weapon, wand, shield
+    IERC20Extended[4] public upgradeToken; // character, weapon, wand, shield
 
-    IERC20Extended public repairWeaponToken;
-    IERC20Extended public repairWandToken;
-    IERC20Extended public repairShieldToken;
-
-    uint256 public characterBUSDPrice;
-    uint256 public weaponBUSDPrice;
-    uint256 public wandBUSDPrice;
-    uint256 public shieldBUSDPrice;
-
-    uint256 public characterUpgradeBUSDPrice;
-
-    uint256 public weaponLevelUpBUSDPrice;
-    uint256 public wandLevelUpBUSDPrice;
-    uint256 public shieldLevelUpBUSDPrice;
-
-    uint256 public weaponRepairBUSDPrice;
-    uint256 public wandRepairBUSDPrice;
-    uint256 public shieldRepairBUSDPrice;
-
-    uint256 public maxUpgradeStatus;
-
-    uint256 public xpGainBase;
-
-    uint256 public charLevelUpTax;
+    
+    uint256[2] public xpGain; // perFight, perLevel
+    uint256[2] public charLevelUpTax; // numerator, denominator
+    uint256[3] public charRecoverFee; // numerator, denominator, recover
+    uint256[3] public repairBUSDPrice; // weapon, wand, shield
+    uint256[3] public levelUpBUSDPrice; // weapon, wand, shield
+    uint256[4] public mintBUSDPrice; // character, weapon, wand, shield
+    uint256[4] public upgradeBUSDPrice; // character, weapon, wand, shield
+    uint256[4] public maxUpgradeStatus; // character, weapon, wand, shield
 
 
     /** CONSTRUCTOR **/
     constructor(
+        IERC20Extended _rewardToken,
         IERC20Extended _rvzToken,
         IERC20Extended _apocToken,
-        IERC20Extended _rewardToken,
+        IERC20Extended _lznToken,
         IUniswapV2Router02 _router,
         ApocalypseRandomizer _randomizer,
         ApocalypseCharacter _apocCharacter,
@@ -7041,23 +7015,13 @@ contract ApocalypseMediator is Pausable, Auth {
         ApocalypseWand _apocWand,
         ApocalypseShield _apocShield
     ) {
-        router = _router;
-
-        mintCharacterToken = _rvzToken;
-        mintWeaponToken = _apocToken;
-        mintWandToken = _apocToken;
-        mintShieldToken = _apocToken;
-        rewardToken = _rewardToken;
         
-        upgradeCharacterToken = _apocToken;
-        levelUpCharacterToken = _apocToken;
-        levelUpWeaponToken = _apocToken;
-        levelUpWandToken = _apocToken;
-        levelUpShieldToken = _apocToken;
+        xpGain = [100, 1000];
+        charLevelUpTax = [25, 100];
+        charRecoverFee = [50, 100, 100];
+        maxUpgradeStatus = [2, 0, 0, 0];
 
-        repairWeaponToken = _apocToken;
-        repairWandToken = _apocToken;
-        repairShieldToken = _apocToken;
+        router = _router;
 
         randomizer = _randomizer;
         apocCharacter = _apocCharacter;
@@ -7065,37 +7029,31 @@ contract ApocalypseMediator is Pausable, Auth {
         apocWand = _apocWand;
         apocShield = _apocShield;
 
-        maxUpgradeStatus = 2;
-        xpGainBase = 10;
+        rewardToken = _rewardToken;
+        recoverToken = _lznToken;
+        repairToken = [_apocToken, _apocToken, _apocToken];
+        levelUpToken = [_apocToken, _apocToken, _apocToken, _apocToken];
+        mintToken = [_rvzToken, _apocToken, _apocToken, _apocToken];
+        upgradeToken = [_apocToken, _apocToken, _apocToken, _apocToken];
 
-        charLevelUpTax = 5;
-
-        characterUpgradeBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
-        weaponLevelUpBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
-        wandLevelUpBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
-        shieldLevelUpBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
+        repairBUSDPrice = [5000000000000000000, 5000000000000000000, 5000000000000000000];
         
-        weaponRepairBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
-        wandRepairBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
-        shieldRepairBUSDPrice = uint256(10).mul(10**rewardToken.decimals());
+        levelUpBUSDPrice = [10000000000000000000, 10000000000000000000, 10000000000000000000];
 
-        characterBUSDPrice = uint256(100).mul(10**rewardToken.decimals());
-        weaponBUSDPrice = uint256(50).mul(10**rewardToken.decimals());
-        wandBUSDPrice = uint256(50).mul(10**rewardToken.decimals());
-        shieldBUSDPrice = uint256(50).mul(10**rewardToken.decimals());
+        mintBUSDPrice = [100000000000000000000, 30000000000000000000, 30000000000000000000, 50000000000000000000];
+
+        upgradeBUSDPrice = [10000000000000000000, 0, 0, 0];
         
     }
 
 
     /** EVENT **/
-    event ChangeRewardToken(address caller, address prevRewardToken, address newRewardToken);
-    event ChangeMintCharacterToken(address caller, address prevMintCharacterToken, address newMintCharacterToken);
-    event ChangeMintWeaponToken(address caller, address prevMintWeaponToken, address newMintWeaponToken);
-    event ChangeMintWandToken(address caller, address prevMintWandToken, address newMintWandToken);
-    event ChangeMintShieldToken(address caller, address prevMintShieldToken, address newMintShieldToken);
-    event ChangeRouter(address caller, address prevRouter, address newRouter);
-    event ChangeRandomizer(address caller, address prevRandomizer, address newRandomizer);
-    
+    event UpdatePrice(address caller, uint256 index, uint256 prevPrice, uint256 newPrice, string category);
+    event Repair(address caller, uint256 tokenID, string category);
+    event LevelUp(address caller, uint256 tokenID, string category);
+    event LevelUpFail(address caller, uint256 tokenID, string category);
+    event LevelUpFailAndBurn(address caller, uint256 tokenID, string category);
+
 
     /** FUNCTION **/
 
@@ -7121,92 +7079,70 @@ contract ApocalypseMediator is Pausable, Auth {
 
     /* Respective contract functions */
 
-    function changeRewardToken(IERC20Extended _rewardToken) public authorized {
-        address prevRewardToken = address(rewardToken);
-        rewardToken = _rewardToken;
-        emit ChangeRewardToken(_msgSender(), prevRewardToken, address(rewardToken));
-    }
-
-    function changeMintCharacterToken(IERC20Extended _mintCharacterToken) public authorized {
-        address prevMintCharacterToken = address(mintCharacterToken);
-        mintCharacterToken = _mintCharacterToken;
-        emit ChangeMintCharacterToken(_msgSender(), prevMintCharacterToken, address(mintCharacterToken));
-    }
-
-    function changeMintWeaponToken(IERC20Extended _mintWeaponToken) public authorized {
-        address prevMintWeaponToken = address(mintWeaponToken);
-        mintWeaponToken = _mintWeaponToken;
-        emit ChangeMintWeaponToken(_msgSender(), prevMintWeaponToken, address(mintWeaponToken));
-    }
-
-    function changeMintWandToken(IERC20Extended _mintWandToken) public authorized {
-        address prevMintWandToken = address(mintWandToken);
-        mintWandToken = _mintWandToken;
-        emit ChangeMintWandToken(_msgSender(), prevMintWandToken, address(mintWandToken));
-    }
-
-    function changeMintShieldToken(IERC20Extended _mintShieldToken) public authorized {
-        address prevMintShieldToken = address(mintShieldToken);
-        mintShieldToken = _mintShieldToken;
-        emit ChangeMintShieldToken(_msgSender(), prevMintShieldToken, address(mintShieldToken));
-    }
-
     function changeRouter(IUniswapV2Router02 _router) public authorized {
-        address prevRouter = address(router);
         router = _router;
-        emit ChangeRouter(_msgSender(), prevRouter, address(router));
     }
 
     function changeRandomizer(ApocalypseRandomizer _randomizer) public authorized {
-        address prevRandomizer = address(randomizer);
         randomizer = _randomizer;
-        emit ChangeRandomizer(_msgSender(), prevRandomizer, address(randomizer));
     }
 
-    /* Default stats functions */
-
-    function setCharLevelUpTax(uint256 _tax) public authorized {
-        require(_tax > 1);
-        charLevelUpTax = _tax;
+    function changeRewardToken(IERC20Extended _rewardToken) public authorized {
+        rewardToken = _rewardToken;
     }
 
-    function setMaxUpgradeStatus(uint256 _maxUpgradeStatus) public onlyOwner {
-        require(_maxUpgradeStatus > 0);
-        maxUpgradeStatus = _maxUpgradeStatus;
-        apocCharacter.setMaxUpgradeStatus(_maxUpgradeStatus);
-    }
-    
-    function updateXPGainBase(uint256 _xpGainBase) public onlyOwner {
-        require(_xpGainBase > 0);
-        xpGainBase = _xpGainBase;
+    function changeRecoverToken(IERC20Extended _recoverToken) public authorized {
+        recoverToken = _recoverToken;
     }
 
-    function updateUpgradeBUSDPrice(uint256 _characterUpgradeBUSDPrice, uint256 _weaponLevelUpBUSDPrice, uint256 _wandLevelUpBUSDPrice, uint256 _shieldLevelUpBUSDPrice) public onlyOwner {
-        require(_characterUpgradeBUSDPrice > 0 && _weaponLevelUpBUSDPrice > 0 && _wandLevelUpBUSDPrice > 0 && _shieldLevelUpBUSDPrice > 0);
-        characterUpgradeBUSDPrice = uint256(_characterUpgradeBUSDPrice).mul(10**rewardToken.decimals());
-        weaponLevelUpBUSDPrice = uint256(_weaponLevelUpBUSDPrice).mul(10**rewardToken.decimals());
-        wandLevelUpBUSDPrice = uint256(_wandLevelUpBUSDPrice).mul(10**rewardToken.decimals());
-        shieldLevelUpBUSDPrice = uint256(_shieldLevelUpBUSDPrice).mul(10**rewardToken.decimals());
+    function changeRepairToken(uint256 _index, IERC20Extended _repairToken) public authorized {
+        require(_index < repairToken.length, "Index cannot be out of array size.");
+        repairToken[_index] = _repairToken;
     }
 
-    function updateRepairBUSDPrice(uint256 _weaponRepairBUSDPrice, uint256 _wandRepairBUSDPrice, uint256 _shieldRepairBUSDPrice) public onlyOwner {
-        require(_weaponRepairBUSDPrice > 0 && _wandRepairBUSDPrice > 0 && _shieldRepairBUSDPrice > 0);
-        weaponRepairBUSDPrice = uint256(_weaponRepairBUSDPrice).mul(10**rewardToken.decimals());
-        wandRepairBUSDPrice = uint256(_wandRepairBUSDPrice).mul(10**rewardToken.decimals());
-        shieldRepairBUSDPrice = uint256(_shieldRepairBUSDPrice).mul(10**rewardToken.decimals());
+    function changeLevelUpToken(uint256 _index, IERC20Extended _levelUpToken) public authorized {
+        require(_index < levelUpToken.length, "Index cannot be out of array size.");
+        levelUpToken[_index] = _levelUpToken;
     }
 
-    function updateMintBUSDPrice(uint256 _characterBUSDPrice, uint256 _weaponBUSDPrice, uint256 _wandBUSDPrice, uint256 _shieldBUSDPrice) public onlyOwner {
-        require(_characterBUSDPrice > 0 && _weaponBUSDPrice > 0 && _wandBUSDPrice > 0 && _shieldBUSDPrice > 0);
-        characterBUSDPrice = uint256(_characterBUSDPrice).mul(10**rewardToken.decimals());
-        weaponBUSDPrice = uint256(_weaponBUSDPrice).mul(10**rewardToken.decimals());
-        wandBUSDPrice = uint256(_wandBUSDPrice).mul(10**rewardToken.decimals());
-        shieldBUSDPrice = uint256(_shieldBUSDPrice).mul(10**rewardToken.decimals());
+    function changeMintToken(uint256 _index, IERC20Extended _mintToken) public authorized {
+        require(_index < mintToken.length, "Index cannot be out of array size.");
+        mintToken[_index] = _mintToken;
+    }
+
+    function changeUpgradeToken(uint256 _index, IERC20Extended _upgradeToken) public authorized {
+        require(_index < upgradeToken.length, "Index cannot be out of array size.");
+        upgradeToken[_index] = _upgradeToken;
+    }
+
+    /* Default functions */
+
+    function updateMaxUpgradeStatus(uint256 _index, uint256 _maxUpgradeStatus) public authorized {
+        require(_maxUpgradeStatus > 0, "Maximum upgrade status cannot be 0.");
+        require(_index < maxUpgradeStatus.length, "Index cannot be out of array size.");
+        maxUpgradeStatus[_index] = _maxUpgradeStatus;
+    }
+
+    function updateCharRecoverFee(uint256 _numerator, uint256 _denominator, uint256 _recover) public authorized {
+        require(_numerator <= _denominator.div(100).mul(50), "Fee cannot exceed 50%.");
+        require(_recover > 0, "HP recover cannot be 0.");
+        charRecoverFee = [_numerator, _denominator, _recover];
+    }
+
+    function updateCharLevelUpTax(uint256 _numerator, uint256 _denominator) public authorized {
+        require(_numerator <= _denominator.div(100).mul(25), "Tax cannot exceed 25%.");
+        charLevelUpTax = [_numerator, _denominator];
+    }
+
+    function updateXPGain(uint256 _perFight, uint256 _perLevel) public authorized {
+        require(_perFight > 0, "XP gained per fight need cannot be 0.");
+        require(_perLevel >= 1000, "XP gained per level must be at least 1000.");
+        xpGain = [_perFight, _perLevel];
     }
 
     /* Check functions */
 
-    function checkPrice(uint256 _priceBUSD, IERC20Extended _token) public view returns (uint256){
+    function checkPrice(uint256 _priceBUSD, IERC20Extended _token) public view returns (uint256) {
         address[] memory path = new address[](3);
         path[0] = address(_token);
         path[1] = router.WETH();
@@ -7214,159 +7150,38 @@ contract ApocalypseMediator is Pausable, Auth {
         return router.getAmountsIn(_priceBUSD, path)[0];
     }
 
-    function getXPGain(uint256 _tokenID) public view returns(uint256) {
-        return (apocCharacter.getCharLevel(_tokenID).sub(1)).mul(2).add(xpGainBase);
+    function mixer(address _caller, uint256 _upChance, uint256 _depletion) public view returns (uint256, uint256) {
+        uint256 ratio1 = _upChance.div(_depletion);
+        uint256 ratio2 = _depletion.div(_upChance);
+        uint256 targetBlock = block.number + ratio1;
+        uint256 random = randomizer.randomNGenerator(uint256(uint160(_caller)), block.timestamp, targetBlock);
+        uint256 checkLevelUp = randomizer.sliceNumber(random, 10, 2, ratio1);
+        uint256 checkBurn = randomizer.sliceNumber(random, 10, 2, ratio2);
+        return (checkLevelUp, checkBurn);
     }
 
-    /* Pay and level up or upgrades functions */
+    /* Recover HP functions */
 
-    function upgradeCharacter(uint256 _tokenID1, uint256 _tokenID2) external whenNotPaused returns (bool, uint256) {
-        require(_msgSender() == apocCharacter.ownerOf(_tokenID1) && _msgSender() == apocCharacter.ownerOf(_tokenID2));
-        require(
-            apocCharacter.getCharSkill(_tokenID1) == apocCharacter.getCharSkill(_tokenID2) &&
-            apocCharacter.getCharType(_tokenID1) == apocCharacter.getCharType(_tokenID2) &&
-            apocCharacter.getCharStatus(_tokenID1) == apocCharacter.getCharStatus(_tokenID2)
-        );
-
-        uint256 _nextStatus = apocCharacter.getCharStatus(_tokenID1).add(1);
-        require (_nextStatus <= maxUpgradeStatus);
-
-        uint256 amount = checkPrice(characterUpgradeBUSDPrice, upgradeCharacterToken);
-        upgradeCharacterToken.transferFrom(_msgSender(), address(upgradeCharacterToken), amount);
-
-        return apocCharacter.upgradeCharacter(_msgSender(), _tokenID1, _tokenID2, _nextStatus);
+    function recoverHP(uint256 _tokenID) external whenNotPaused {
+        uint256 fee = apocCharacter.getCharLevel(_tokenID).mul(charRecoverFee[0]).div(charRecoverFee[1]);
+        recoverToken.transferFrom(_msgSender(), address(this), checkPrice(fee.mul(10**18), recoverToken));
+        apocCharacter.recoverHP(_tokenID, charRecoverFee[2]);
     }
 
-    function levelUpCharacter(uint256 _tokenID) external whenNotPaused {
-        require(_msgSender() == apocCharacter.ownerOf(_tokenID));
-        uint256 rounds = uint256(1000).div(getXPGain(_tokenID));
-        if (rounds.mul(getXPGain(_tokenID)) < 1000) {
-            rounds += 1;
-        }
-        uint256 gain = rounds.mul(apocCharacter.getCharLevel(_tokenID));
-        uint256 fee = gain.div(charLevelUpTax);
-        
-        uint256 amount = checkPrice(fee.mul(10**18), upgradeCharacterToken);
-        upgradeCharacterToken.transferFrom(_msgSender(), address(upgradeCharacterToken), amount);
+    /* Repair NFT functions */
 
-        apocCharacter.updateNextXP(_tokenID);
-        apocCharacter.levelUp(_tokenID);
+    function updateRepairPrice(uint256 _index, uint256 _repairPrice) public authorized {
+        require(_index < repairBUSDPrice.length, "Index cannot be out of array size.");
+        require(_repairPrice > uint256(0), "Price cannot be 0.");
+        uint256 prevRepairPrice = repairBUSDPrice[_index];
+        repairBUSDPrice[_index] = _repairPrice;
+        emit UpdatePrice(_msgSender(), _index, prevRepairPrice, _repairPrice, "Repair");
     }
-
-    function levelUpWeapon(uint256 _tokenID) external whenNotPaused {
-        require(_msgSender() == apocWeapon.ownerOf(_tokenID));
-        uint256 amount = checkPrice(weaponLevelUpBUSDPrice, levelUpWeaponToken);
-        uint256 level = apocWeapon.getWeaponLevel(_tokenID);
-        uint256 upChance = apocWeapon.getWeaponUpChance(level);
-        uint256 depletion = apocWeapon.getWeaponDepletion(level);
-        
-        uint256 userAddress = uint256(uint160(_msgSender()));
-        uint256 targetBlock = block.number + (upChance/depletion);
-        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, targetBlock);
-        uint256 checkLevelUp = randomizer.sliceNumber(random, 10, 2, upChance/depletion);
-        uint256 checkBurn = randomizer.sliceNumber(random, 10, 2, depletion/upChance);
-
-        levelUpWeaponToken.transferFrom(_msgSender(), address(levelUpWeaponToken), amount);
-
-        if (checkLevelUp > upChance && checkBurn <= depletion) {
-            apocWeapon._burnLevelUp(_tokenID);
-            return;
-        } else if (checkLevelUp > upChance && checkBurn > depletion) {
-            return;
-        } else {
-            apocWeapon.levelUp(_tokenID);
-            uint256 weaponLevel = apocWeapon.getWeaponLevel(_tokenID);
-            apocWeapon.updateAttack(_tokenID, apocWeapon.getWeaponAttack(weaponLevel));
-        }   
-
-    }
-
-    function levelUpWand(uint256 _tokenID) external whenNotPaused {
-        require(_msgSender() == apocWand.ownerOf(_tokenID));
-        uint256 amount = checkPrice(wandLevelUpBUSDPrice, levelUpWandToken);
-        uint256 level = apocWand.getWandLevel(_tokenID);
-        uint256 upChance = apocWand.getWandUpChance(level);
-        uint256 depletion = apocWand.getWandDepletion(level);
-        
-        uint256 userAddress = uint256(uint160(_msgSender()));
-        uint256 targetBlock = block.number + (upChance/depletion);
-        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, targetBlock);
-        uint256 checkLevelUp = randomizer.sliceNumber(random, 10, 2, upChance/depletion);
-        uint256 checkBurn = randomizer.sliceNumber(random, 10, 2, depletion/upChance);
-
-        levelUpWandToken.transferFrom(_msgSender(), address(levelUpWandToken), amount);
-
-        if (checkLevelUp > upChance && checkBurn <= depletion) {
-            apocWand._burnLevelUp(_tokenID);
-            return;
-        } else if (checkLevelUp > upChance && checkBurn > depletion) {
-            return;
-        } else {
-            apocWand.levelUp(_tokenID);
-            uint256 wandLevel = apocWand.getWandLevel(_tokenID);
-            apocWand.updateAttack(_tokenID, apocWand.getWandAttack(wandLevel));
-        }   
-    }
-
-    function levelUpShield(uint256 _tokenID) external whenNotPaused {
-        require(_msgSender() == apocShield.ownerOf(_tokenID));
-        uint256 amount = checkPrice(shieldLevelUpBUSDPrice, levelUpShieldToken);
-        uint256 level = apocShield.getShieldLevel(_tokenID);
-        uint256 upChance = apocShield.getShieldUpChance(level);
-        uint256 depletion = apocShield.getShieldDepletion(level);
-        
-        uint256 userAddress = uint256(uint160(_msgSender()));
-        uint256 targetBlock = block.number + (upChance/depletion);
-        uint256 random = randomizer.randomNGenerator(userAddress, block.timestamp, targetBlock);
-        uint256 checkLevelUp = randomizer.sliceNumber(random, 10, 2, upChance/depletion);
-        uint256 checkBurn = randomizer.sliceNumber(random, 10, 2, depletion/upChance);
-
-        levelUpShieldToken.transferFrom(_msgSender(), address(levelUpShieldToken), amount);
-        
-        if (checkLevelUp > upChance && checkBurn <= depletion) {
-            apocShield._burnLevelUp(_tokenID);
-            return;
-        } else if (checkLevelUp > upChance && checkBurn > depletion) {
-            return;
-        } else {
-            apocShield.levelUp(_tokenID);
-            uint256 shieldLevel = apocShield.getShieldLevel(_tokenID);
-            apocShield.updateDefence(_tokenID, apocShield.getShieldDefence(shieldLevel));
-        }   
-    }
-
-    /* Pay and mint NFT functions */
-
-    function mintCharacter() external whenNotPaused returns (uint256) {
-        uint256 amount = checkPrice(characterBUSDPrice, mintCharacterToken);
-        mintCharacterToken.transferFrom(_msgSender(), address(mintCharacterToken), amount);
-        return apocCharacter.mintNewCharacter(_msgSender());
-    }
-
-    function mintWand() external whenNotPaused returns (uint256) {
-        uint256 amount = checkPrice(wandBUSDPrice, mintWandToken);
-        mintWandToken.transferFrom(_msgSender(), address(mintWandToken), amount);
-        return apocWand.mintNewWand(_msgSender());
-    }
-
-    function mintWeapon() external whenNotPaused returns (uint256) {
-        uint256 amount = checkPrice(weaponBUSDPrice, mintWeaponToken);
-        mintWeaponToken.transferFrom(_msgSender(), address(mintWeaponToken), amount);
-        return apocWeapon.mintNewWeapon(_msgSender());
-    }
-
-    function mintShield() external whenNotPaused returns (uint256)  {
-        uint256 amount = checkPrice(shieldBUSDPrice, mintShieldToken);
-        mintShieldToken.transferFrom(_msgSender(), address(mintShieldToken), amount);
-        return apocShield.mintNewShield(_msgSender());
-    }
-
-    /* Pay and mint NFT functions */
 
     function repairWeapon(uint256 _tokenID) external whenNotPaused {
-        require(_msgSender() == apocWeapon.ownerOf(_tokenID));
-        uint256 amount = checkPrice(weaponRepairBUSDPrice, repairWeaponToken);
-        repairWeaponToken.transferFrom(_msgSender(), address(repairWeaponToken), amount);
+        require(_msgSender() == apocWeapon.ownerOf(_tokenID), "You are not the owner of this weapon.");
+
+        repairToken[0].transferFrom(_msgSender(), address(this), checkPrice(repairBUSDPrice[0], repairToken[0]));
 
         uint256 status = apocWeapon.getWeaponStatus(_tokenID);
         
@@ -7381,12 +7196,14 @@ contract ApocalypseMediator is Pausable, Auth {
         }
 
         apocWeapon.recoverEndurance(_tokenID, _recoverEndurance);
+
+        emit Repair(_msgSender(), _tokenID, "Weapon");
     }
 
     function repairWand(uint256 _tokenID) external whenNotPaused {
-        require(_msgSender() == apocWand.ownerOf(_tokenID));
-        uint256 amount = checkPrice(wandRepairBUSDPrice, repairWandToken);
-        repairWandToken.transferFrom(_msgSender(), address(repairWandToken), amount);
+        require(_msgSender() == apocWand.ownerOf(_tokenID), "You are not the owner of this wand.");
+        
+        repairToken[1].transferFrom(_msgSender(), address(this), checkPrice(repairBUSDPrice[1], repairToken[1]));
         
         uint256 status = apocWand.getWandStatus(_tokenID);
         
@@ -7401,15 +7218,17 @@ contract ApocalypseMediator is Pausable, Auth {
         }
 
         apocWand.recoverEndurance(_tokenID, _recoverEndurance);
+        
+        emit Repair(_msgSender(), _tokenID, "Wand");
     }
 
     function repairShield(uint256 _tokenID) external whenNotPaused {
-        require(_msgSender() == apocShield.ownerOf(_tokenID));
-        uint256 amount = checkPrice(shieldRepairBUSDPrice, repairShieldToken);
-        repairShieldToken.transferFrom(_msgSender(), address(repairShieldToken), amount);
+        require(_msgSender() == apocShield.ownerOf(_tokenID), "You are not the owner of this shield.");
+
+        repairToken[2].transferFrom(_msgSender(), address(this), checkPrice(repairBUSDPrice[2], repairToken[2]));
         
         uint256 status = apocShield.getShieldStatus(_tokenID);
-        
+       
         uint256 _recoverEndurance;
 
         if (status == 0) {
@@ -7421,6 +7240,233 @@ contract ApocalypseMediator is Pausable, Auth {
         }
 
         apocShield.recoverEndurance(_tokenID, _recoverEndurance);
+
+        emit Repair(_msgSender(), _tokenID, "Shield");
+    }
+
+    /* Level up NFT functions */
+
+    function updateLevelUpPrice(uint256 _index, uint256 _levelUpPrice) public authorized {
+        require(_index < levelUpBUSDPrice.length, "Index cannot be out of array size.");
+        require(_levelUpPrice > uint256(0), "Price cannot be 0.");
+        uint256 prevLevelUpPrice = levelUpBUSDPrice[_index];
+        levelUpBUSDPrice[_index] = _levelUpPrice;
+        emit UpdatePrice(_msgSender(), _index, prevLevelUpPrice, _levelUpPrice, "LevelUp");
+    }
+
+    function levelUpCharacter(uint256 _tokenID) external whenNotPaused {
+        require(_msgSender() == apocCharacter.ownerOf(_tokenID), "You are not the owner of this character.");
+        uint256 rounds = xpGain[1].div(xpGain[0]);
+        if (rounds.mul(xpGain[0]) < 1000) {
+            rounds += 1;
+        }
+        
+        uint256 fee = rounds.mul(apocCharacter.getCharLevel(_tokenID)).mul(charLevelUpTax[0]).div(charLevelUpTax[1]);
+                
+        levelUpToken[0].transferFrom(_msgSender(), address(this), checkPrice(fee.mul(10**18), levelUpToken[0]));
+
+        apocCharacter.updateNextXP(_tokenID);
+        apocCharacter.levelUp(_tokenID);
+
+        emit LevelUp(_msgSender(), _tokenID, "Character");
+
+    }
+
+    function levelUpWeapon(uint256 _tokenID) external whenNotPaused {
+        require(_msgSender() == apocWeapon.ownerOf(_tokenID), "You are not the owner of this weapon.");
+
+        uint256 level = apocWeapon.getWeaponLevel(_tokenID);
+        uint256 upChance = apocWeapon.getWeaponUpChance(level);
+        uint256 depletion = apocWeapon.getWeaponDepletion(level);
+        
+        (uint256 checkLevelUp, uint256 checkBurn) = mixer(_msgSender(), upChance, depletion);
+
+        levelUpToken[1].transferFrom(_msgSender(), address(this), checkPrice(levelUpBUSDPrice[0], levelUpToken[1]));
+
+        if (checkLevelUp > upChance && checkBurn <= depletion) {
+            apocWeapon._burnLevelUp(_tokenID);
+            emit LevelUpFailAndBurn(_msgSender(), _tokenID, "Weapon");
+            return;
+        } else if (checkLevelUp > upChance && checkBurn > depletion) {
+            emit LevelUpFail(_msgSender(), _tokenID, "Weapon");
+            return;
+        } else {
+            apocWeapon.levelUp(_tokenID);
+            uint256 weaponLevel = apocWeapon.getWeaponLevel(_tokenID);
+            apocWeapon.updateAttack(_tokenID, apocWeapon.getWeaponAttack(weaponLevel));
+            emit LevelUp(_msgSender(), _tokenID, "Weapon");
+        }   
+
+    }
+
+    function levelUpWand(uint256 _tokenID) external whenNotPaused {
+        require(_msgSender() == apocWand.ownerOf(_tokenID), "You are not the owner of this wand.");
+
+        uint256 level = apocWand.getWandLevel(_tokenID);
+        uint256 upChance = apocWand.getWandUpChance(level);
+        uint256 depletion = apocWand.getWandDepletion(level);
+        
+        (uint256 checkLevelUp, uint256 checkBurn) = mixer(_msgSender(), upChance, depletion);
+
+        levelUpToken[2].transferFrom(_msgSender(), address(this), checkPrice(levelUpBUSDPrice[1], levelUpToken[2]));
+
+        if (checkLevelUp > upChance && checkBurn <= depletion) {
+            apocWand._burnLevelUp(_tokenID);
+            emit LevelUpFailAndBurn(_msgSender(), _tokenID, "Wand");
+            return;
+        } else if (checkLevelUp > upChance && checkBurn > depletion) {
+            emit LevelUpFail(_msgSender(), _tokenID, "Wand");
+            return;
+        } else {
+            apocWand.levelUp(_tokenID);
+            uint256 wandLevel = apocWand.getWandLevel(_tokenID);
+            apocWand.updateAttack(_tokenID, apocWand.getWandAttack(wandLevel));
+            emit LevelUp(_msgSender(), _tokenID, "Wand");
+        }   
+    }
+
+    function levelUpShield(uint256 _tokenID) external whenNotPaused {
+        require(_msgSender() == apocShield.ownerOf(_tokenID), "You are not the owner of this shield.");
+        
+        uint256 level = apocShield.getShieldLevel(_tokenID);
+        uint256 upChance = apocShield.getShieldUpChance(level);
+        uint256 depletion = apocShield.getShieldDepletion(level);
+
+        (uint256 checkLevelUp, uint256 checkBurn) = mixer(_msgSender(), upChance, depletion);
+
+        levelUpToken[3].transferFrom(_msgSender(), address(this), checkPrice(levelUpBUSDPrice[2], levelUpToken[3]));
+
+        if (checkLevelUp > upChance && checkBurn <= depletion) {
+            apocShield._burnLevelUp(_tokenID);
+            emit LevelUpFailAndBurn(_msgSender(), _tokenID, "Shield");
+            return;
+        } else if (checkLevelUp > upChance && checkBurn > depletion) {
+            emit LevelUpFail(_msgSender(), _tokenID, "Shield");
+            return;
+        } else {
+            apocShield.levelUp(_tokenID);
+            uint256 shieldLevel = apocShield.getShieldLevel(_tokenID);
+            apocShield.updateDefence(_tokenID, apocShield.getShieldDefence(shieldLevel));
+            emit LevelUp(_msgSender(), _tokenID, "Shield");
+        }   
+    }
+
+    /* Mint NFT functions */
+
+    function updateMintPrice(uint256 _index, uint256 _mintPrice) public authorized {
+        require(_index < mintBUSDPrice.length, "Index cannot be out of array size.");
+        require(_mintPrice > uint256(0), "Price cannot be 0.");
+        uint256 prevMintPrice = mintBUSDPrice[_index];
+        mintBUSDPrice[_index] = _mintPrice;
+        emit UpdatePrice(_msgSender(), _index, prevMintPrice, _mintPrice, "Mint");
+    }
+
+    function mintCharacter() external whenNotPaused returns (uint256) {
+        mintToken[0].transferFrom(_msgSender(), address(this), checkPrice(mintBUSDPrice[0], mintToken[0]));
+        return apocCharacter.mintNewCharacter(_msgSender());
+    }
+
+    function mintWeapon() external whenNotPaused returns (uint256) {
+        mintToken[1].transferFrom(_msgSender(), address(this), checkPrice(mintBUSDPrice[1], mintToken[1]));
+        return apocWand.mintNewWand(_msgSender());
+    }
+
+    function mintWand() external whenNotPaused returns (uint256) {
+        mintToken[2].transferFrom(_msgSender(), address(this), checkPrice(mintBUSDPrice[2], mintToken[2]));
+        return apocWeapon.mintNewWeapon(_msgSender());
+    }
+
+    function mintShield() external whenNotPaused returns (uint256)  {
+        mintToken[3].transferFrom(_msgSender(), address(this), checkPrice(mintBUSDPrice[3], mintToken[3]));
+        return apocShield.mintNewShield(_msgSender());
+    }
+
+    /* Upgrade NFT functions */
+
+    function updateUpgradePrice(uint256 _index, uint256 _upgradePrice) public authorized {
+        require(_index < upgradeBUSDPrice.length, "Index cannot be out of array size.");
+        require(_upgradePrice > uint256(0), "Price cannot be 0.");
+        uint256 prevUpgradePrice = upgradeBUSDPrice[_index];
+        upgradeBUSDPrice[_index] = _upgradePrice;
+        emit UpdatePrice(_msgSender(), _index, prevUpgradePrice, _upgradePrice, "Upgrade");
+    }
+
+    function upgradeCharacter(uint256 _tokenID1, uint256 _tokenID2) external whenNotPaused returns (bool, uint256) {
+        require(_msgSender() == apocCharacter.ownerOf(_tokenID1), "You are not the owner of the first character.");
+        require(_msgSender() == apocCharacter.ownerOf(_tokenID2), "You are not the owner of the second character.");
+        
+        ( , uint256 charStatus1, uint256 charType1, uint256 charSkill1, , , , , , , ) = apocCharacter.apocChar(_tokenID1);
+        ( , uint256 charStatus2, uint256 charType2, uint256 charSkill2, , , , , , , ) = apocCharacter.apocChar(_tokenID2);
+        
+        require(
+            charStatus1 == charStatus2 && charType1 == charType2 && charSkill1 == charSkill2,
+            "You need characters with the exact same skill, type and status."
+        );
+        require (charStatus1.add(1) < maxUpgradeStatus[0], "You have reach the max upgrade allowed for first character.");
+        require (charStatus2.add(1) < maxUpgradeStatus[0], "You have reach the max upgrade allowed for second character.");
+
+        uint256 _nextStatus = charStatus1.add(1);
+
+        upgradeToken[0].transferFrom(_msgSender(), address(this), checkPrice(upgradeBUSDPrice[0], upgradeToken[0]));
+
+        return apocCharacter.upgradeCharacter(_msgSender(), _tokenID1, _tokenID2, _nextStatus);
+    }
+
+    function upgradeWeapon(uint256 _tokenID1, uint256 _tokenID2) external whenNotPaused returns (bool, uint256) {
+        require(_msgSender() == apocWeapon.ownerOf(_tokenID1), "You are not the owner of the first weapon.");
+        require(_msgSender() == apocWeapon.ownerOf(_tokenID2), "You are not the owner of the second weapon.");
+        
+        ( , , uint256 weaponStatus1, uint256 weaponType1, , , ) = apocWeapon.apocWeapon(_tokenID1);
+        ( , , uint256 weaponStatus2, uint256 weaponType2, , , ) = apocWeapon.apocWeapon(_tokenID2);
+        
+        require(
+            weaponStatus1 == weaponStatus2 && weaponType1 == weaponType2,
+            "You need weapons with the exact same type and status."
+        );
+        require (weaponStatus1.add(1) < maxUpgradeStatus[1], "You have reach the max upgrade allowed for first weapon.");
+        require (weaponStatus2.add(1) < maxUpgradeStatus[1], "You have reach the max upgrade allowed for second weapon.");
+
+        upgradeToken[1].transferFrom(_msgSender(), address(this), checkPrice(upgradeBUSDPrice[1], upgradeToken[1]));
+
+        return apocWeapon.upgradeWeapon(_msgSender(), _tokenID1, _tokenID2);
+    }
+
+    function upgradeWand(uint256 _tokenID1, uint256 _tokenID2) external whenNotPaused returns (bool, uint256) {
+        require(_msgSender() == apocWand.ownerOf(_tokenID1), "You are not the owner of the first wand.");
+        require(_msgSender() == apocWand.ownerOf(_tokenID2), "You are not the owner of the second wand.");
+        
+        ( , , uint256 wandStatus1, uint256 wandType1, , , ) = apocWand.apocWand(_tokenID1);
+        ( , , uint256 wandStatus2, uint256 wandType2, , , ) = apocWand.apocWand(_tokenID2);
+        
+        require(
+            wandStatus1 == wandStatus2 && wandType1 == wandType2,
+            "You need wands with the exact same type and status."
+        );
+        require (wandStatus1.add(1) < maxUpgradeStatus[2], "You have reach the max upgrade allowed for first wand.");
+        require (wandStatus2.add(1) < maxUpgradeStatus[2], "You have reach the max upgrade allowed for second wand.");
+
+        upgradeToken[2].transferFrom(_msgSender(), address(this), checkPrice(upgradeBUSDPrice[2], upgradeToken[2]));
+
+        return apocWand.upgradeWand(_msgSender(), _tokenID1, _tokenID2);
+    }
+
+    function upgradeShield(uint256 _tokenID1, uint256 _tokenID2) external whenNotPaused returns (bool, uint256) {
+        require(_msgSender() == apocShield.ownerOf(_tokenID1), "You are not the owner of the first shield.");
+        require(_msgSender() == apocShield.ownerOf(_tokenID2), "You are not the owner of the second shield.");
+        
+        ( , , uint256 shieldStatus1, uint256 shieldType1, , , ) = apocShield.apocShield(_tokenID1);
+        ( , , uint256 shieldStatus2, uint256 shieldType2, , , ) = apocShield.apocShield(_tokenID2);
+        
+        require(
+            shieldStatus1 == shieldStatus2 && shieldType1 == shieldType2,
+            "You need shields with the exact same type and status."
+        );
+        require (shieldStatus1.add(1) < maxUpgradeStatus[3], "You have reach the max upgrade allowed for first shield.");
+        require (shieldStatus2.add(1) < maxUpgradeStatus[3], "You have reach the max upgrade allowed for second shield.");
+
+        upgradeToken[3].transferFrom(_msgSender(), address(this), checkPrice(upgradeBUSDPrice[3], upgradeToken[3]));
+
+        return apocShield.upgradeShield(_msgSender(), _tokenID1, _tokenID2);
     }
 
 }
