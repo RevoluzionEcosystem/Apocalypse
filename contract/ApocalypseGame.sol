@@ -7473,10 +7473,10 @@ contract ApocalypseMediator is Pausable, Auth {
 
 contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
 
+
     /** LIBRARY **/
     using SafeMath for uint256;
     using Address for address;
-    using Strings for string;
     using Counters for Counters.Counter;
 
 
@@ -7489,11 +7489,14 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
     ApocalypseRandomizer public randomizer;
     ApocalypseCharacter public apocCharacter;
     ApocalypseMineral public apocMineral;
+    ApocalypsePot public apocPot;
 
     IERC20Extended public rewardToken;
     IERC20Extended public peggedToken;
 
     Counters.Counter public _pvpID;
+    Counters.Counter public _pvpFought;
+    Counters.Counter public _pvpCanceled;
 
     struct pvpInfo {
         uint256 pvpID;
@@ -7506,13 +7509,17 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
     }
 
     uint256 public minStake;
+    uint256 public totalStake;
     uint256 public statusOffset;
     uint256 public dropNumber;
     uint256 public dropOffset;
     uint256 public dropNumerator;
     uint256 public dropDenominatorBase;
-    uint256 public rewardTaxNumerator;
-    uint256 public rewardTaxDenominator;
+    uint256[2] public rewardTax; // Numerator, Denominator
+    uint256[2] public cancelTax; // Numerator, Denominator
+    uint256[2] public potDistribution; // Numerator, Denominator
+    
+    bool public allowPot;
 
     address public DEAD = 0x000000000000000000000000000000000000dEaD;
     address public ZERO = 0x0000000000000000000000000000000000000000;
@@ -7520,6 +7527,7 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
     mapping(uint256 => pvpInfo) public idToPvPInfo;
     mapping(address => uint256) public fightLost;
     mapping(address => uint256) public fightWon;
+    mapping(uint256 => uint256) public getCurrentPvPIDForCharacter;
 
 
     /** CONSTRUCTOR **/
@@ -7531,6 +7539,7 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
         ApocalypseRandomizer _randomizer,
         ApocalypseCharacter _apocCharacter,
         ApocalypseMineral _apocMineral,
+        ApocalypsePot _apocPot,
         RewardPoolDistributor _distributor
     ) {
         router = _router;
@@ -7539,6 +7548,7 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
         randomizer = _randomizer;
         apocCharacter = _apocCharacter;
         apocMineral = _apocMineral;
+        apocPot = _apocPot;
         distributor = _distributor;
 
         minStake = 1000000000000000000;
@@ -7547,8 +7557,11 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
         dropOffset = 3;
         dropNumerator = 30;
         dropDenominatorBase = 2;
-        rewardTaxNumerator = 20;
-        rewardTaxDenominator = 100;
+        rewardTax = [20, 100];
+        cancelTax = [10, 100];
+        potDistribution = [50, 100];
+
+        allowPot = false;
     }
 
 
@@ -7558,11 +7571,14 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
     event ChangeRandomizer(address caller, address prevRandomizer, address newRandomizer);
     event ChangeApocalypseCharacter(address caller, address prevApocalypseCharacter, address newApocalypseCharacter);
     event ChangeApocalypseMineral(address caller, address prevApocalypseMineral, address newApocalypseMineral);
+    event ChangeApocalypsePot(address caller, address prevApocalypsePot, address newApocalypsePot);
     event ChangeDistributor(address caller, address prevDistributor, address newDistributor);
     event ChangeRouter(address caller, address prevRouter, address newRouter);
     event PvPCompleted(uint256 idPvP, address winner, address loser);
+    event PvPCancelled(uint256 idPvP, address creator);
     event CreatePvPRoom(uint256 idPvP, address player1, uint256 stakeAmount);
     event JoinPvPRoom(uint256 idPvP, address player2, uint256 stakeAmount);
+    event PotDistributed(address potWinnerAddress);
 
 
     /** FUNCTION **/  
@@ -7571,33 +7587,31 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
 
     receive() external payable {}
     
-    function pause() public whenNotPaused authorized {
+    function pause() external whenNotPaused authorized {
         _pause();
     }
 
-    function unpause() public whenPaused onlyOwner {
+    function unpause() external whenPaused onlyOwner {
         _unpause();
     }
 
-    function burnAllTokens(IERC20Extended _token) public onlyOwner {
-        require(IERC20Extended(_token).transfer(DEAD, IERC20Extended(_token).balanceOf(address(this))));
-    }
-
-    function burnPartialTokens(IERC20Extended _token, uint256 _numerator, uint256 _denominator) public onlyOwner {
-        uint256 amount = IERC20Extended(_token).balanceOf(address(this)).mul(_numerator).div(_denominator);
-        require(IERC20Extended(_token).transfer(DEAD, amount));
-    }
-
-    function poolAllTokens(IERC20Extended _token) public onlyOwner {
+    function poolAllTokens(IERC20Extended _token) external onlyOwner {
         
         address[] memory path1 = new address[](2);
         path1[0] = address(_token);
         path1[1] = router.WETH();
         
         uint256 balanceBefore = address(this).balance;
+        uint256 amount = 0;
+
+        if (_token == rewardToken) {
+            amount = IERC20Extended(_token).balanceOf(address(this)).sub(totalStake);
+        } else {
+            amount = IERC20Extended(_token).balanceOf(address(this));
+        }
 
         router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            IERC20Extended(_token).balanceOf(address(this)),
+            amount,
             0,
             path1,
             address(this),
@@ -7617,9 +7631,15 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
         require(IERC20Extended(peggedToken).transfer(address(distributor), IERC20Extended(peggedToken).balanceOf(address(this))));
     }
 
-    function poolPartialTokens(IERC20Extended _token, uint256 _numerator, uint256 _denominator) public onlyOwner {
-         
-        uint256 amount = IERC20Extended(_token).balanceOf(address(this)).mul(_numerator).div(_denominator);
+    function poolPartialTokens(IERC20Extended _token, uint256 _numerator, uint256 _denominator) external onlyOwner {
+        
+        uint256 amount = 0;
+        
+        if (_token == rewardToken) {
+            amount = IERC20Extended(_token).balanceOf(address(this)).sub(totalStake).mul(_numerator).div(_denominator);
+        } else {
+            amount = IERC20Extended(_token).balanceOf(address(this)).mul(_numerator).div(_denominator);
+        }
 
         address[] memory path1 = new address[](2);
         path1[0] = address(_token);
@@ -7648,28 +7668,37 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
         require(IERC20Extended(peggedToken).transfer(address(distributor), IERC20Extended(peggedToken).balanceOf(address(this))));
     }
 
-    function withdrawTokens(IERC20Extended _token, address beneficiary) public onlyOwner {
-        require(IERC20Extended(_token).transfer(beneficiary, IERC20Extended(_token).balanceOf(address(this))));
+    function withdrawAllTokens(IERC20Extended _token, address beneficiary) external onlyOwner {
+        if (_token == rewardToken) {
+            require(IERC20Extended(_token).transfer(beneficiary, IERC20Extended(_token).balanceOf(address(this)).sub(totalStake)));
+        } else {
+            require(IERC20Extended(_token).transfer(beneficiary, IERC20Extended(_token).balanceOf(address(this))));
+        }
     }
 
-    function withdrawNative(address payable beneficiary) public onlyOwner {
+    function withdrawAllNative(address payable beneficiary) external onlyOwner {
         beneficiary.transfer(address(this).balance);
     }
 
     /* Update functions */
 
-    function updateMinStake(uint256 _minStake) public authorized {
+    function updateAllowPot(bool _allowPot) external authorized {
+        require(allowPot != _allowPot, "This is the current value!");
+        allowPot = _allowPot;
+    }
+
+    function updateMinStake(uint256 _minStake) external authorized {
         require(minStake >= 1000000000000000000, "Minimum stake cannot be lower than 1 BUSD worth of the token!");
         require(minStake != _minStake, "This is the current value!");
         minStake = _minStake;
     }
 
-    function updateStatusOffset(uint256 _statusOffset) public authorized {
+    function updateStatusOffset(uint256 _statusOffset) external authorized {
         require(statusOffset != _statusOffset, "This is the current value!");
         statusOffset = _statusOffset;
     }
 
-    function updateDrop(uint256 _dropNumber, uint256 _dropOffset, uint256 _dropNumerator, uint256 _dropDenominatorBase) public authorized {
+    function updateDrop(uint256 _dropNumber, uint256 _dropOffset, uint256 _dropNumerator, uint256 _dropDenominatorBase) external authorized {
         require(dropNumber != _dropNumber, "This is the current value for drop number!");
         require(dropOffset != _dropOffset, "This is the current value for drop offset!");
         require(dropNumerator != _dropNumerator, "This is the current value for drop numerator!");
@@ -7680,51 +7709,66 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
         dropDenominatorBase = _dropDenominatorBase;
     }
 
-    function updateRewardTax(uint256 _rewardTaxNumerator, uint256 _rewardTaxDenominator) public authorized {
+    function updateRewardTax(uint256 _rewardTaxNumerator, uint256 _rewardTaxDenominator) external authorized {
         require(_rewardTaxNumerator < _rewardTaxDenominator.mul(40).div(100), "Total tax should not be greater than 40%.");
-        rewardTaxNumerator = _rewardTaxNumerator;
-        rewardTaxDenominator = _rewardTaxDenominator;
+        rewardTax = [_rewardTaxNumerator, _rewardTaxDenominator];
+    }
+
+    function updateCancelTax(uint256 _cancelTaxNumerator, uint256 _cancelTaxDenominator) external authorized {
+        require(_cancelTaxNumerator < _cancelTaxDenominator.mul(20).div(100), "Total tax should not be greater than 20%.");
+        cancelTax = [_cancelTaxNumerator, _cancelTaxDenominator];
+    }
+
+    function updatePotDistribution(uint256 _potDistributionNumerator, uint256 _potDistributionDenominator) external authorized {
+        require(_potDistributionNumerator <= _potDistributionDenominator, "Total distribution should not be greater than 100%.");
+        potDistribution = [_potDistributionNumerator, _potDistributionDenominator];
     }
 
     /* Respective contract functions */
 
-    function changeRewardToken(IERC20Extended _rewardToken) public authorized {
+    function changeRewardToken(IERC20Extended _rewardToken) external authorized {
         address prevRewardToken = address(rewardToken);
         rewardToken = _rewardToken;
         emit ChangeRewardToken(_msgSender(), prevRewardToken, address(rewardToken));
     }
 
-    function changePeggedToken(IERC20Extended _peggedToken) public authorized {
+    function changePeggedToken(IERC20Extended _peggedToken) external authorized {
         address prevPeggedToken = address(peggedToken);
         peggedToken = _peggedToken;
         emit ChangePeggedToken(_msgSender(), prevPeggedToken, address(peggedToken));
     }
 
-    function changeRandomizer(ApocalypseRandomizer _randomizer) public authorized {
+    function changeRandomizer(ApocalypseRandomizer _randomizer) external authorized {
         address prevRandomizer = address(randomizer);
         randomizer = _randomizer;
         emit ChangeRandomizer(_msgSender(), prevRandomizer, address(randomizer));
     }
 
-    function changeApocalypseCharacter(ApocalypseCharacter _apocCharacter) public authorized {
+    function changeApocalypseCharacter(ApocalypseCharacter _apocCharacter) external authorized {
         address prevApocalypseCharacter = address(apocCharacter);
         apocCharacter = _apocCharacter;
         emit ChangeApocalypseCharacter(_msgSender(), prevApocalypseCharacter, address(_apocCharacter));
     }
 
-    function changeApocalypseMineral(ApocalypseMineral _apocMineral) public authorized {
+    function changeApocalypseMineral(ApocalypseMineral _apocMineral) external authorized {
         address prevApocalypseMineral = address(apocMineral);
         apocMineral = _apocMineral;
         emit ChangeApocalypseMineral(_msgSender(), prevApocalypseMineral, address(_apocMineral));
     }
 
-    function changeDistributor(RewardPoolDistributor _distributor) public authorized {
+    function changeApocalypsePot(ApocalypsePot _apocPot) external authorized {
+        address prevApocalypsePot = address(apocPot);
+        apocPot = _apocPot;
+        emit ChangeApocalypsePot(_msgSender(), prevApocalypsePot, address(_apocPot));
+    }
+
+    function changeDistributor(RewardPoolDistributor _distributor) external authorized {
         address prevDistributor = address(distributor);
         distributor = _distributor;
         emit ChangeDistributor(_msgSender(), prevDistributor, address(distributor));
     }
 
-    function changeRouter(IUniswapV2Router02 _router) public authorized {
+    function changeRouter(IUniswapV2Router02 _router) external authorized {
         address prevRouter = address(router);
         router = _router;
         emit ChangeRouter(_msgSender(), prevRouter, address(router));
@@ -7771,10 +7815,11 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
     /**
      * @dev Create a new PvP listing.
      */
-    function createPvPRoom(uint256 _charID, uint256 _price) public payable whenNotPaused nonReentrant {
+    function createPvPRoom(uint256 _charID, uint256 _price) external payable whenNotPaused nonReentrant {
 
         uint256 _amount = checkPrice(minStake, rewardToken);
 
+        require(getCurrentPvPIDForCharacter[_charID] == 0 , "There's an active PvP room for this character!");
         require(_price >= _amount, "Price must be greater than the minimum amount allowed!");
         require(apocCharacter.ownerOf(_charID) == _msgSender(), "You are not the owner of this character!");
 
@@ -7782,8 +7827,10 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
         uint256 _getPvPID = _pvpID.current();
 
         idToPvPInfo[_getPvPID] =  pvpInfo(_getPvPID, _price, _charID, 0, false, payable(_msgSender()), payable(ZERO));
-
+        getCurrentPvPIDForCharacter[_charID] = _getPvPID;
+        
         rewardToken.transferFrom(_msgSender(), address(this), _price);
+        totalStake = totalStake.add(_price);
 
         emit CreatePvPRoom(_getPvPID, _msgSender(), _amount);
     }
@@ -7791,22 +7838,24 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
     /**
      * @dev Join listed PvP room.
      */
-    function joinPvPRoom(uint256 _charID, uint256 _roomID) public payable whenNotPaused nonReentrant {
+    function joinPvPRoom(uint256 _charID, uint256 _roomID) external payable whenNotPaused nonReentrant {
 
         require(_roomID > 0 && _roomID <= _pvpID.current(), "This PvP fight does not exist!");
         require(idToPvPInfo[_roomID].fight == false, "This PvP fight already ended!");
         require(apocCharacter.ownerOf(_charID) == _msgSender(), "You are not the owner of this character!");
+        require(idToPvPInfo[_roomID].player1 != _msgSender(), "You cannot join the PvP room that you created!");
 
         uint256 _amount = idToPvPInfo[_roomID].amountToStake;
         
         rewardToken.transferFrom(_msgSender(), address(this), _amount);
+        totalStake = totalStake.sub(_amount);
 
         idToPvPInfo[_roomID].player2 = payable(_msgSender());
         idToPvPInfo[_roomID].charIDP2 = _charID;
         
         emit JoinPvPRoom(_roomID, _msgSender(), _amount);
         
-        uint256 _tax = (_amount.mul(rewardTaxNumerator)).div(rewardTaxDenominator);
+        uint256 _tax = _amount.mul(rewardTax[0]).div(rewardTax[1]);
         uint256 _winnerReward = (_amount.sub(_tax)).mul(2);
 
         address _player1 = idToPvPInfo[_roomID].player1;
@@ -7830,6 +7879,236 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
         }
                 
         idToPvPInfo[_roomID].fight = true;
+        _pvpFought.increment();
+
+        getCurrentPvPIDForCharacter[idToPvPInfo[_roomID].charIDP1] = 0;
+        getCurrentPvPIDForCharacter[idToPvPInfo[_roomID].charIDP2] = 0;
+
+        if (allowPot == true) {
+            (address potWinnerAddress, bool distributeStatus) = apocPot.distributePot(_player1, _player2);
+
+            if (distributeStatus == true) {
+                emit PotDistributed(potWinnerAddress);
+            }
+        }
+
+        uint256 pot = rewardToken.balanceOf(address(this)).sub(totalStake).mul(potDistribution[0]).div(potDistribution[1]);
+        require(rewardToken.transferFrom(address(this), address(apocPot), pot));
 
     }
+
+    /**
+     * @dev Cancel PvP room session.
+     */
+    function cancelPvPRoom(uint256 _roomID) external payable nonReentrant {
+            
+        uint256 _staked = idToPvPInfo[_roomID].amountToStake;
+        address _creator = idToPvPInfo[_roomID].player1;
+        address _competitor = idToPvPInfo[_roomID].player2;
+        bool _fight = idToPvPInfo[_roomID].fight;
+
+        require(_msgSender() == _creator, "You are not the creator for this PvP room session.");
+        require(_fight == false && _competitor == payable(ZERO), "This NFT has either been sold or the listing was already canceled");
+        
+        idToPvPInfo[_roomID].player2 = payable(_msgSender());
+        _pvpCanceled.increment();
+
+        idToPvPInfo[_roomID].fight = true;
+        
+        if (cancelTax[0] > 0) {
+            uint256 _tax = _staked.mul(cancelTax[0]).div(cancelTax[1]);
+            require(rewardToken.transferFrom(address(this), _msgSender(), _staked.sub(_tax)));
+        } else {
+            require(rewardToken.transferFrom(address(this), _msgSender(), _staked));
+        }
+        totalStake = totalStake.sub(_staked);
+
+        emit PvPCancelled(_roomID, _msgSender());
+    }
+    
+    /**
+     * @dev Fetch all active PvP sessions.
+     */
+    function fetchActivePvP() external view returns (pvpInfo[] memory) {
+        
+        uint256 _pvpCount = _pvpID.current();
+        uint256 _activePvPCount = _pvpID.current() - _pvpFought.current() - _pvpCanceled.current();
+        uint256 _currentIndex = 0;
+
+        pvpInfo[] memory items = new pvpInfo[](_activePvPCount);
+        
+        for (uint256 i = 0; i < _pvpCount; i++) {
+            if (idToPvPInfo[i + 1].player2 == ZERO) {
+                uint256 currentID = i + 1;
+                pvpInfo storage currentItem = idToPvPInfo[currentID];
+                items[_currentIndex] = currentItem;
+                _currentIndex += 1;
+            }
+        }
+
+        return items;
+    }
+}
+
+contract ApocalypsePot is Pausable, Auth {
+
+
+    /** LIBRARY **/
+    using SafeMath for uint256;
+    using Address for address;
+
+
+    /** DATA **/
+
+    uint256 public playerValueOffset;
+    uint256 public dropOffset;
+    uint256 public dropNumber;
+    uint256 public timeLimit;
+    uint256 public lastDistributionTime;  
+
+    bool public allowDistribution;  
+    bool public distributed;
+
+    IERC20Extended public rewardToken;
+    ApocalypseRandomizer public randomizer;
+
+    /** CONSTRUCTOR **/
+
+    constructor(
+        IERC20Extended _rewardToken,
+        ApocalypseRandomizer _randomizer
+    ) {
+        rewardToken = _rewardToken; 
+        randomizer = _randomizer;
+
+        timeLimit = 2 days;
+        playerValueOffset = 2;
+        dropOffset = playerValueOffset.mul(3);
+        dropNumber = 10000;
+    }
+
+
+    /** EVENT **/
+    event Distributed(address _potWinner, uint256 _potAmount, uint256 _seed);
+    event StartDistribution(uint256 _timestamp);
+    event StopDistribution(uint256 _timestamp);
+    event ChangeTimeLimit(uint256 _prevTimeLimit, uint256 _newtimeLimit, uint256 _timestamp);
+    event ChangeRewardToken(address caller, address prevRewardToken, address newRewardToken);
+    event ChangeRandomizer(address caller, address prevRandomizer, address newRandomizer);
+
+    /** FUNCTION **/
+
+    /* General functions */
+
+    receive() external payable {}
+ 
+    function withdrawTokens(IERC20Extended _token, address beneficiary) external onlyOwner {
+        require(IERC20Extended(_token).transfer(beneficiary, IERC20Extended(_token).balanceOf(address(this))));
+    }
+
+    function withdrawNative(address payable beneficiary) external onlyOwner {
+        beneficiary.transfer(address(this).balance);
+    }
+
+    function pause() external whenNotPaused authorized {
+        _pause();
+    }
+
+    function unpause() external whenPaused onlyOwner {
+        _unpause();
+    }
+
+    /* Update functions */
+
+    function startDistribution() external onlyOwner {
+        lastDistributionTime = block.timestamp;
+        allowDistribution = true;
+        emit StartDistribution(lastDistributionTime);
+    }
+
+    function stopDistribution() external onlyOwner {
+        allowDistribution = false;
+        emit StopDistribution(block.timestamp);
+    }
+
+    function updateTimeLimit(uint256 _timeLimit) external onlyOwner {
+        require(timeLimit != _timeLimit, "You cannot set new value using the current value!");
+        uint256 prevTimeLimit = timeLimit;
+        timeLimit = _timeLimit;
+        emit ChangeTimeLimit(prevTimeLimit, timeLimit, block.timestamp);
+    }
+
+    function updatePlayerValueOffset(uint256 _playerValueOffset) external onlyOwner {
+        require(playerValueOffset != _playerValueOffset, "You cannot set new value using the current value!");
+        playerValueOffset = _playerValueOffset;
+    }
+
+    function updateDropOffset(uint256 _dropOffset) external onlyOwner {
+        require(dropOffset != _dropOffset, "You cannot set new value using the current value!");
+        dropOffset = _dropOffset;
+    }
+
+    function updateDropNumber(uint256 _dropNumber) external onlyOwner {
+        require(dropNumber != _dropNumber, "You cannot set new value using the current value!");
+        dropNumber = _dropNumber;
+    }
+
+    /* Respective contract functions */
+
+    function changeRewardToken(IERC20Extended _rewardToken) external authorized {
+        address prevRewardToken = address(rewardToken);
+        rewardToken = _rewardToken;
+        emit ChangeRewardToken(_msgSender(), prevRewardToken, address(rewardToken));
+    }
+
+    function changeRandomizer(ApocalypseRandomizer _randomizer) external authorized {
+        address prevRandomizer = address(randomizer);
+        randomizer = _randomizer;
+        emit ChangeRandomizer(_msgSender(), prevRandomizer, address(randomizer));
+    }
+    
+    /* Check functions */
+
+    function canDistribute() public view returns (bool) {
+        return allowDistribution && block.timestamp >= timeLimit.add(lastDistributionTime);
+    }
+
+    function addressMixer(address _player1, address _player2) public view returns (uint256, uint256, uint256) {
+        uint256 random = randomizer.randomNGenerator(uint256(uint160(_player1)), uint256(uint160(_player2)), block.timestamp);
+        uint256 _player = randomizer.sliceNumber(random, 2, 1, playerValueOffset);
+        uint256 _drop = randomizer.sliceNumber(random, dropNumber, 1, dropOffset);
+        return (_player, _drop, random);
+    }
+
+    function chanceMixer(address _candidate) public view returns (uint256) {
+        uint256 random = randomizer.randomNGenerator(uint256(uint160(address(this))), uint256(uint160(_candidate)), dropNumber);
+        return randomizer.sliceNumber(random, dropNumber, 1, dropOffset);
+    }
+
+    /* Pot functions */
+
+    function distributePot(address _player1, address _player2) external whenNotPaused authorized returns (address, bool) {
+        
+        uint256 potAmount = rewardToken.balanceOf(address(this));
+        address[2] memory candidates = [_player1, _player2];
+
+        address potWinner;
+        bool distribution;
+        uint256 hash;
+
+        if (canDistribute() == true) {
+            (uint256 player, uint256 drop, uint256 seed) = addressMixer(_player1, _player2);
+            potWinner = candidates[player];
+            hash = seed;
+            distribution = chanceMixer(potWinner) <= drop ? true : false;
+        }
+
+        if (distribution == true) {    
+            require(rewardToken.transfer(potWinner, potAmount));
+            emit Distributed(potWinner, potAmount, hash);
+        }
+
+        return (potWinner, distribution);
+    }
+
 }
