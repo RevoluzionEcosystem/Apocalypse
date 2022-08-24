@@ -7520,6 +7520,7 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
     uint256[2] public potDistribution; // Numerator, Denominator
     
     bool public allowPot;
+    bool public allowMultipleRoom;
 
     address public DEAD = 0x000000000000000000000000000000000000dEaD;
     address public ZERO = 0x0000000000000000000000000000000000000000;
@@ -7562,6 +7563,7 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
         potDistribution = [50, 100];
 
         allowPot = false;
+        allowMultipleRoom = true;
     }
 
 
@@ -7819,7 +7821,9 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
 
         uint256 _amount = checkPrice(minStake, rewardToken);
 
-        require(getCurrentPvPIDForCharacter[_charID] == 0 , "There's an active PvP room for this character!");
+        if (allowMultipleRoom == false) {
+            require(getCurrentPvPIDForCharacter[_charID] == 0 , "There's an active PvP room for this character!");
+        }
         require(_price >= _amount, "Price must be greater than the minimum amount allowed!");
         require(apocCharacter.ownerOf(_charID) == _msgSender(), "You are not the owner of this character!");
 
@@ -7882,7 +7886,6 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
         _pvpFought.increment();
 
         getCurrentPvPIDForCharacter[idToPvPInfo[_roomID].charIDP1] = 0;
-        getCurrentPvPIDForCharacter[idToPvPInfo[_roomID].charIDP2] = 0;
 
         if (allowPot == true) {
             (address potWinnerAddress, bool distributeStatus) = apocPot.distributePot(_player1, _player2);
@@ -7939,6 +7942,48 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
         
         for (uint256 i = 0; i < _pvpCount; i++) {
             if (idToPvPInfo[i + 1].player2 == ZERO) {
+                uint256 currentID = i + 1;
+                pvpInfo storage currentItem = idToPvPInfo[currentID];
+                items[_currentIndex] = currentItem;
+                _currentIndex += 1;
+            }
+        }
+
+        return items;
+    }
+
+    /**
+     * @dev Fetch all completed PvP sessions.
+     */
+    function fetchCompletedPvP() external view returns (pvpInfo[] memory) {
+        
+        uint256 _currentIndex = 0;
+
+        pvpInfo[] memory items = new pvpInfo[](_pvpFought.current());
+        
+        for (uint256 i = 0; i < _pvpID.current(); i++) {
+            if (idToPvPInfo[i + 1].fight == true && idToPvPInfo[i + 1].player1 != idToPvPInfo[i + 1].player2) {
+                uint256 currentID = i + 1;
+                pvpInfo storage currentItem = idToPvPInfo[currentID];
+                items[_currentIndex] = currentItem;
+                _currentIndex += 1;
+            }
+        }
+
+        return items;
+    }
+
+    /**
+     * @dev Fetch all cancelled PvP sessions.
+     */
+    function fetchCancelledPvP() external view returns (pvpInfo[] memory) {
+        
+        uint256 _currentIndex = 0;
+
+        pvpInfo[] memory items = new pvpInfo[](_pvpCanceled.current());
+        
+        for (uint256 i = 0; i < _pvpID.current(); i++) {
+            if (idToPvPInfo[i + 1].fight == true && idToPvPInfo[i + 1].player1 == idToPvPInfo[i + 1].player2) {
                 uint256 currentID = i + 1;
                 pvpInfo storage currentItem = idToPvPInfo[currentID];
                 items[_currentIndex] = currentItem;
