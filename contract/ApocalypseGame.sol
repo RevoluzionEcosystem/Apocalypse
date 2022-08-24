@@ -7563,7 +7563,7 @@ contract ApocalypsePvP is Pausable, Auth, ReentrancyGuard {
         potDistribution = [50, 100];
 
         allowPot = false;
-        allowMultipleRoom = true;
+        allowMultipleRoom = false;
     }
 
 
