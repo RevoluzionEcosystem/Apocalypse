@@ -10,13 +10,6 @@
  * Website : revoluzion.io
  * Apoc Website : apocgame.io
  * Apoc Game dApp : app.apocgame.io
- * Discord : https://discord.gg/TvAXzYq5ht
- * Whitepaper : whitepaper.revoluzion.io
- * Facebook :facebook.com/revoluziontoken/
- * Twitter : twitter.com/RevoluzionToken
- * Linkedin : linkedin.com/company/revoluzion-token/
- * GitHub : github.com/RevoluzionToken
- * Telegram : t.me/revoluziontoken
  */
 
 
